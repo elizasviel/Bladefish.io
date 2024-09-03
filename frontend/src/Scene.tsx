@@ -1,12 +1,46 @@
 import React, { Suspense, useMemo, useState, useEffect } from "react";
 import { Player } from "./Player";
-import { Sphere, Box, Cylinder } from "@react-three/drei";
+import {
+  Sphere,
+  Box,
+  Cylinder,
+  Portal,
+  MeshPortalMaterial,
+  shaderMaterial,
+} from "@react-three/drei";
 import { useWebSocket } from "./WebSocketContext";
+import { extend, useFrame } from "@react-three/fiber";
 
 interface PlayerData {
   id: string;
   position: { x: number; y: number; z: number };
 }
+
+const PortalRaysMaterial = shaderMaterial(
+  { time: 0, color: [0, 1, 1] },
+  // Vertex shader
+  `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  // Fragment shader
+  `
+    uniform float time;
+    uniform vec3 color;
+    varying vec2 vUv;
+    void main() {
+      vec2 center = vec2(0.5, 0.5);
+      float dist = distance(vUv, center);
+      float alpha = smoothstep(0.5, 0.4, dist) * (0.5 + 0.5 * sin(dist * 40.0 - time * 2.0));
+      gl_FragColor = vec4(color, alpha);
+    }
+  `
+);
+
+extend({ PortalRaysMaterial });
 
 export const Scene: React.FC = () => {
   const [players, setPlayers] = useState<PlayerData[]>([]);
@@ -18,6 +52,14 @@ export const Scene: React.FC = () => {
 
   const seaweed = useMemo(() => generateSeaweed(20), []);
   const rocks = useMemo(() => generateRocks(10), []);
+
+  const portalRaysMaterialRef = React.useRef();
+
+  useFrame((state) => {
+    if (portalRaysMaterialRef.current) {
+      portalRaysMaterialRef.current.time = state.clock.getElapsedTime();
+    }
+  });
 
   useEffect(() => {
     if (socket) {
@@ -38,7 +80,7 @@ export const Scene: React.FC = () => {
 
   return (
     <Suspense fallback={null}>
-      <ambientLight intensity={0.3} />
+      <ambientLight intensity={0.8} />
       <directionalLight position={[5, 5, 5]} intensity={0.5} />
       <Player
         key={localPlayer.id}
@@ -63,6 +105,47 @@ export const Scene: React.FC = () => {
 
       {/* Rocks */}
       {rocks}
+
+      {/* Portal */}
+      <group position={[10, 0, 0]}>
+        {/* Portal border */}
+        <mesh>
+          <ringGeometry args={[1.9, 2.1, 64]} />
+          <meshBasicMaterial color="#00ffff" toneMapped={false} />
+        </mesh>
+
+        {/* Portal rays */}
+        <mesh>
+          <ringGeometry args={[1.5, 3, 64]} />
+          {/* @ts-ignore */}
+          <portalRaysMaterial
+            ref={portalRaysMaterialRef}
+            color={[0, 1, 1]}
+            transparent
+          />
+        </mesh>
+
+        {/* Portal content */}
+        <mesh>
+          <circleGeometry args={[2, 64]} />
+          <MeshPortalMaterial>
+            <color attach="background" args={["lightblue"]} />
+            <ambientLight intensity={1} />
+            <pointLight position={[0, 0, 0]} intensity={5} color="lightblue" />
+            <Box position={[0, 0, -5]}>
+              <meshStandardMaterial color="hotpink" />
+            </Box>
+          </MeshPortalMaterial>
+        </mesh>
+
+        {/* Emissive glow */}
+        <pointLight
+          position={[0, 0, 0.1]}
+          distance={5}
+          intensity={5}
+          color="#00ffff"
+        />
+      </group>
     </Suspense>
   );
 };
