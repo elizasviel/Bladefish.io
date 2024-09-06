@@ -11,11 +11,16 @@ interface Player {
   position: Position;
 }
 
+//start a new websocket connection at port 8080
 const wss = new WebSocket.Server({ port: 8080 });
 
+//initialze state, create a new map consisted of string palyer
 const players = new Map<string, Player>();
 
+//call this when broadcasting server state to clients
 function broadcastState() {
+  //data object sent consists of a label identifying it as state
+  //data payload is an array of id and positions
   const state = {
     type: "state",
     data: Array.from(players.entries()).map(([id, player]) => ({
@@ -24,6 +29,7 @@ function broadcastState() {
     })),
   };
 
+  //sends to each client
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(state));
@@ -32,6 +38,7 @@ function broadcastState() {
 }
 
 function updatePlayerPosition(playerId: string, key: string) {
+  //updates the position of the player based on the keys pressed
   const player = players.get(playerId);
   if (!player) return;
 
@@ -68,14 +75,17 @@ function updatePlayerPosition(playerId: string, key: string) {
   }
 }
 
+//when there is a new connection
 wss.on("connection", (ws: WebSocket) => {
   let playerId: string | null = null;
 
   console.log("New client connected");
 
+  //add a listener for messages to the connection
   ws.on("message", (message: WebSocket.Data) => {
     const data = JSON.parse(message.toString());
 
+    //listen to create player
     if (data.type === "createPlayer") {
       playerId = uuidv4();
       players.set(playerId, {
