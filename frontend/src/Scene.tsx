@@ -1,51 +1,116 @@
-import React, { Suspense, useState, useEffect } from "react";
-import { Player } from "./Player";
-import { useWebSocket } from "./WebSocketContext";
-import { useKeyboardControls } from "./useKeyboardControls";
-
-interface PlayerData {
-  id: string;
-  position: { x: number; y: number; z: number };
+import { useEffect, useRef, useState } from "react";
+import { Vector3 } from "three";
+interface Position {
+  x: number;
+  y: number;
+  z: number;
 }
 
-export const Scene: React.FC = () => {
-  const [players, setPlayers] = useState<PlayerData[]>([]);
-  const { socket, isConnected, playerId } = useWebSocket();
+interface Rotation {
+  x: number;
+  y: number;
+  z: number;
+}
 
-  useKeyboardControls();
+interface Player {
+  id: string;
+  position: Position;
+  rotation: Rotation;
+}
+
+const Scene = () => {
+  const socket = useRef<WebSocket | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [playerId, setPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    const ws = new WebSocket("ws://localhost:8080");
 
-    const handleMessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data);
-      if (message.type === "state") {
-        setPlayers(message.data);
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+      socket.current = ws;
+      ws.send(JSON.stringify({ type: "createPlayer" }));
+      ws.send(JSON.stringify({ type: "getInitialState" }));
+    };
+
+    ws.onmessage = (message) => {
+      const data = JSON.parse(message.data);
+      switch (data.type) {
+        case "state":
+          console.log("State received:", data.data);
+          setPlayers(data.data);
+          break;
+        case "id":
+          console.log("ID received:", data.data);
+          setPlayerId(data.data);
+          break;
       }
     };
 
-    socket.addEventListener("message", handleMessage);
+    ws.onclose = () => {
+      console.log("WebSocket disconnected");
+      socket.current = null;
+    };
 
-    // Request initial state
-    socket.send(JSON.stringify({ type: "getInitialState" }));
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (socket.current && playerId) {
+        let movement = { x: 0, y: 0, z: 0 };
+        switch (e.key) {
+          case "w":
+            movement.x = 1;
+            break;
+          case "s":
+            movement.x = -1;
+            break;
+          case "a":
+            movement.z = 1;
+            break;
+          case "d":
+            movement.z = -1;
+            break;
+        }
+        if (movement.x !== 0 || movement.z !== 0) {
+          socket.current.send(
+            JSON.stringify({
+              type: "playerMovement",
+              data: {
+                id: playerId,
+                position: movement,
+                rotation: { x: 0, y: 0, z: 0 },
+              },
+            })
+          );
+        }
+      }
+    };
 
-    // Request player creation if we don't have a player ID yet
-    if (!playerId) {
-      socket.send(JSON.stringify({ type: "createPlayer" }));
-    }
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      socket.removeEventListener("message", handleMessage);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [socket, isConnected, playerId]);
+  }, []);
 
   return (
-    <Suspense fallback={null}>
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 5, 5]} intensity={0.5} />
+    <group>
       {players.map((player) => (
-        <Player key={player.id} position={player.position} />
+        <mesh
+          key={player.id}
+          position={
+            new Vector3(player.position.x, player.position.y, player.position.z)
+          }
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color={player.id === playerId ? "red" : "hotpink"}
+          />
+        </mesh>
       ))}
-    </Suspense>
+    </group>
   );
 };
+
+export default Scene;

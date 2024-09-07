@@ -7,120 +7,101 @@ interface Position {
   z: number;
 }
 
-interface Player {
-  position: Position;
+interface Rotation {
+  x: number;
+  y: number;
+  z: number;
 }
 
-//start a new websocket connection at port 8080
+interface Player {
+  id: string;
+  position: Position;
+  rotation: Rotation;
+  ws: WebSocket;
+}
+
 const wss = new WebSocket.Server({ port: 8080 });
 
-//initialze state, create a new map consisted of string palyer
-const players = new Map<string, Player>();
+let players: Player[] = [];
 
-//call this when broadcasting server state to clients
 function broadcastState() {
-  //data object sent consists of a label identifying it as state
-  //data payload is an array of id and positions
-  const state = {
-    type: "state",
-    data: Array.from(players.entries()).map(([id, player]) => ({
-      id,
-      position: player.position,
-    })),
-  };
-
-  //sends to each client
+  const statePlayers = players.map(({ id, position, rotation }) => ({
+    id,
+    position,
+    rotation,
+  }));
+  const state = { type: "state", data: statePlayers };
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(state));
     }
   });
+  console.log("State broadcasted", statePlayers);
 }
 
-function updatePlayerPosition(playerId: string, key: string) {
-  //updates the position of the player based on the keys pressed
-  const player = players.get(playerId);
-  if (!player) return;
-
-  const speed = 0.1;
-  switch (key.toLowerCase()) {
-    case "w":
-    case "arrowup":
-    case "keyw":
-      player.position.z -= speed;
-      break;
-    case "s":
-    case "arrowdown":
-    case "keys":
-      player.position.z += speed;
-      break;
-    case "a":
-    case "arrowleft":
-    case "keya":
-      player.position.x -= speed;
-      break;
-    case "d":
-    case "arrowright":
-    case "keyd":
-      player.position.x += speed;
-      break;
-    case " ":
-    case "space":
-      player.position.y += speed;
-      break;
-    case "shift":
-    case "shiftleft":
-      player.position.y -= speed;
-      break;
+function handleCreatePlayer(ws: WebSocket) {
+  const existingPlayer = players.find((p) => p.ws === ws);
+  if (existingPlayer) {
+    console.log("Player already exists:", existingPlayer.id);
+    ws.send(JSON.stringify({ type: "id", data: existingPlayer.id }));
+    return;
   }
+
+  const playerId = uuidv4();
+  const newPlayer = {
+    id: playerId,
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    ws: ws,
+  };
+  players.push(newPlayer);
+  ws.send(JSON.stringify({ type: "id", data: playerId }));
+  console.log("Player created:", playerId);
+  broadcastState();
 }
 
-//when there is a new connection
-wss.on("connection", (ws: WebSocket) => {
-  let playerId: string | null = null;
+function handlePlayerMovement(data: any) {
+  const player = players.find((p) => p.id === data.id);
+  if (player) {
+    player.position = data.position;
+    player.rotation = data.rotation;
+    broadcastState();
+  }
+  console.log("Player moved:", player?.id);
+}
 
+function handleGetInitialState(ws: WebSocket) {
+  const statePlayers = players.map(({ id, position, rotation }) => ({
+    id,
+    position,
+    rotation,
+  }));
+  ws.send(JSON.stringify({ type: "state", data: statePlayers }));
+  console.log("Initial state sent");
+}
+
+wss.on("connection", (ws: WebSocket) => {
   console.log("New client connected");
 
-  //add a listener for messages to the connection
   ws.on("message", (message: WebSocket.Data) => {
     const data = JSON.parse(message.toString());
-
-    //listen to create player
-    if (data.type === "createPlayer") {
-      playerId = uuidv4();
-      players.set(playerId, {
-        position: { x: 0, y: 0, z: 0 },
-      });
-      console.log(`New player created: ${playerId}`);
-
-      // Send the player their ID
-      const idMessage = { type: "id", data: playerId };
-      ws.send(JSON.stringify(idMessage));
-
-      // Broadcast updated state to all clients
-      broadcastState();
-    } else if (data.type === "keyEvent" && playerId) {
-      updatePlayerPosition(playerId, data.key);
-      broadcastState();
-    } else if (data.type === "getInitialState") {
-      // Send current state to the requesting client
-      const currentState = {
-        type: "state",
-        data: Array.from(players.entries()).map(([id, player]) => ({
-          id,
-          position: player.position,
-        })),
-      };
-      ws.send(JSON.stringify(currentState));
+    switch (data.type) {
+      case "createPlayer":
+        handleCreatePlayer(ws);
+        break;
+      case "playerMovement":
+        handlePlayerMovement(data.data);
+        break;
+      case "getInitialState":
+        handleGetInitialState(ws);
+        break;
     }
   });
 
   ws.on("close", () => {
-    if (playerId) {
-      console.log(`Player disconnected: ${playerId}`);
-      players.delete(playerId);
-      broadcastState();
-    }
+    players = players.filter((p) => p.ws !== ws);
+    console.log("Player disconnected");
+    broadcastState();
   });
 });
 
