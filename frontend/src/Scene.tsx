@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { OrbitControls } from "@react-three/drei";
+import { PerspectiveCamera, OrbitControls } from "@react-three/drei";
+import * as THREE from "three";
 
 interface Player {
   id: string;
@@ -20,6 +21,8 @@ export const Scene: React.FC = () => {
   const socket = useRef<WebSocket>();
   const id = useRef<string>("");
   const [players, setPlayers] = useState<Player[]>([]);
+  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+  const controlsRef = useRef<any>(null);
 
   const handleKeyDown = (event: KeyboardEvent) => {
     console.log("Scene: Handling key down event", event);
@@ -106,17 +109,39 @@ export const Scene: React.FC = () => {
     return () => {
       console.log("Scene: Cleaning up WebSocket connection");
       socket.current?.close();
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    if (cameraRef.current && controlsRef.current) {
+      const player = players.find((p) => p.id === id.current);
+      if (player) {
+        const targetPosition = new THREE.Vector3(
+          player.position.x,
+          player.position.y,
+          player.position.z
+        );
+        cameraRef.current.position.set(
+          player.position.x,
+          player.position.y + 2,
+          player.position.z + 10
+        );
+        controlsRef.current.target = targetPosition;
+      }
+    }
+  }, [players]);
 
   console.log("Scene: Rendering players", players);
   return (
     <>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
-      <OrbitControls />
+
+      <PerspectiveCamera ref={cameraRef} makeDefault position={[0, 2, 10]} />
+      <OrbitControls ref={controlsRef} />
+
       {players.map((player) => {
-        console.log("Scene: Rendering player", player);
         return (
           <mesh
             key={player.id}
