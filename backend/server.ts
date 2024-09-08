@@ -30,23 +30,21 @@ const wss = new WebSocket.Server({ port: 8080 });
 let players: Player[] = [];
 
 // Function to broadcast the current state to all connected clients
-function broadcastState() {
-  const state = { type: "state", data: players };
+function publishState() {
+  const state = { type: "state", payload: players };
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(state));
     }
   });
-  console.log("State broadcasted");
+  console.log("State published");
 }
 
-// Function to handle creating a new player
-function handleCreatePlayer(ws: WebSocket) {
-  // Generate a unique ID for the player
-  const playerId = uuidv4();
+// Function to initialize a player
+function initializePlayer(ws: WebSocket) {
   // Create a new player object with the generated ID, initial position, rotation, and WebSocket connection
-  const newPlayer = {
-    id: playerId,
+  const newPlayer: Player = {
+    id: uuidv4(),
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
     ws: ws,
@@ -54,49 +52,48 @@ function handleCreatePlayer(ws: WebSocket) {
   // Add the new player to the players array
   players.push(newPlayer);
   // Send the player's ID to the client
-  ws.send(JSON.stringify({ type: "id", data: playerId }));
-  console.log("Player created:", playerId);
+  ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
   // Broadcast the current state to all connected clients
-  broadcastState();
+  publishState();
 }
 
 // Function to handle player movement
-function handlePlayerMovement(data: any) {
+function handlePlayerMovement(payload: any) {
   // Find the player by ID
-  const player = players.find((p) => p.id === data.id);
+  const player = players.find((p) => p.id === payload.id);
   // If the player is found, update their position and rotation
   if (player) {
-    player.position = data.position;
-    player.rotation = data.rotation;
-    // Broadcast the current state to all connected clients
-    broadcastState();
-  }
-  // Log the player's movement
-  console.log("Player moved:", player?.id);
-}
+    // Apply the delta to the player's existing position
+    player.position.x += payload.position.x;
+    player.position.y += payload.position.y;
+    player.position.z += payload.position.z;
 
-// Function to send initial state to a newly connected client
-function handleGetInitialState(ws: WebSocket) {
-  ws.send(JSON.stringify({ type: "state", data: players }));
-  console.log("Initial state sent");
+    // Update the player's rotation
+    player.rotation = payload.rotation;
+
+    // Broadcast the current state to all connected clients
+    publishState();
+
+    // Log the player's movement
+    console.log("Player moved:", player.id, "New position:", player.position);
+  } else {
+    console.log("Player not found:", payload.id);
+  }
 }
 
 // Set up WebSocket server event listeners
 wss.on("connection", (ws: WebSocket) => {
   console.log("New client connected");
 
-  // Handle incoming messages
+  // Initialize the player
+  initializePlayer(ws);
+
+  // Add event listener to the WebSocket connection for incoming messages
   ws.on("message", (message: WebSocket.Data) => {
     const data = JSON.parse(message.toString());
     switch (data.type) {
-      case "createPlayer":
-        handleCreatePlayer(ws);
-        break;
       case "playerMovement":
-        handlePlayerMovement(data.data);
-        break;
-      case "getInitialState":
-        handleGetInitialState(ws);
+        handlePlayerMovement(data.payload);
         break;
     }
   });
@@ -104,8 +101,8 @@ wss.on("connection", (ws: WebSocket) => {
   // Handle client disconnection
   ws.on("close", () => {
     players = players.filter((p) => p.ws !== ws);
-    console.log("Player disconnected");
-    broadcastState();
+    console.log("Player disconnected.");
+    publishState();
   });
 });
 
