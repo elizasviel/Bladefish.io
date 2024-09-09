@@ -44,7 +44,7 @@ export const Scene: React.FC = () => {
         break;
       case "s":
         movement = direction.multiplyScalar(-1);
-        rotation = Math.atan2(-direction.x, -direction.z);
+        rotation = Math.atan2(direction.x, direction.z);
         break;
       case "a":
         movement = sideDirection.multiplyScalar(-1);
@@ -52,7 +52,7 @@ export const Scene: React.FC = () => {
         break;
       case "d":
         movement = sideDirection.multiplyScalar(1);
-        rotation = Math.atan2(-sideDirection.x, -sideDirection.z);
+        rotation = Math.atan2(sideDirection.x, sideDirection.z);
         break;
       default:
         return;
@@ -71,7 +71,6 @@ export const Scene: React.FC = () => {
       })
     );
   };
-
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
 
@@ -139,7 +138,6 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
 };
 
 const LocalPlayer: React.FC<{ player: Player | undefined }> = ({ player }) => {
-  console.log(player?.position, player?.rotation);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef(null);
 
