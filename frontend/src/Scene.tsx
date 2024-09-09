@@ -35,23 +35,30 @@ export const Scene: React.FC = () => {
     sideDirection.copy(direction).cross(camera.up).normalize();
 
     let movement: THREE.Vector3;
+    let rotation: number;
 
     switch (event.key) {
       case "w":
         movement = direction.multiplyScalar(1);
+        rotation = Math.atan2(direction.x, direction.z);
         break;
       case "s":
         movement = direction.multiplyScalar(-1);
+        rotation = Math.atan2(-direction.x, -direction.z);
         break;
       case "a":
         movement = sideDirection.multiplyScalar(-1);
+        rotation = Math.atan2(sideDirection.x, sideDirection.z);
         break;
       case "d":
         movement = sideDirection.multiplyScalar(1);
+        rotation = Math.atan2(-sideDirection.x, -sideDirection.z);
         break;
       default:
         return;
     }
+    // Ensure rotation is within [0, 2π]
+    rotation = (rotation + 2 * Math.PI) % (2 * Math.PI);
 
     socket.current?.send(
       JSON.stringify({
@@ -59,7 +66,7 @@ export const Scene: React.FC = () => {
         payload: {
           id: id.current,
           position: { x: movement.x, y: movement.y, z: movement.z },
-          rotation: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: rotation, z: 0 },
         },
       })
     );
@@ -132,6 +139,7 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
 };
 
 const LocalPlayer: React.FC<{ player: Player | undefined }> = ({ player }) => {
+  console.log(player?.position, player?.rotation);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef(null);
 
@@ -171,7 +179,12 @@ const LocalPlayer: React.FC<{ player: Player | undefined }> = ({ player }) => {
         rotation={[player.rotation.x, player.rotation.y, player.rotation.z]}
       >
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="red" />
+        <meshStandardMaterial attach="material-0" color="red" />
+        <meshStandardMaterial attach="material-1" color="green" />
+        <meshStandardMaterial attach="material-2" color="blue" />
+        <meshStandardMaterial attach="material-3" color="yellow" />
+        <meshStandardMaterial attach="material-4" color="purple" />
+        <meshStandardMaterial attach="material-5" color="cyan" />
       </mesh>
     </>
   );
