@@ -9,6 +9,12 @@ interface Position {
   z: number;
 }
 
+interface Velocity {
+  x: number;
+  y: number;
+  z: number;
+}
+
 interface Rotation {
   x: number;
   y: number;
@@ -20,6 +26,7 @@ interface Player {
   id: string;
   position: Position;
   rotation: Rotation;
+  velocity: Velocity;
   ws: WebSocket;
 }
 
@@ -47,6 +54,7 @@ function initializePlayer(ws: WebSocket) {
     id: uuidv4(),
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
     ws: ws,
   };
   // Add the new player to the players array
@@ -61,12 +69,17 @@ function initializePlayer(ws: WebSocket) {
 function handlePlayerMovement(payload: any) {
   // Find the player by ID
   const player = players.find((p) => p.id === payload.id);
-  // If the player is found, update their position and rotation
+  // If the player is found, update their position, velocity, and rotation
   if (player) {
-    // Apply the delta to the player's existing position
-    player.position.x += payload.position.x;
-    player.position.y += payload.position.y;
-    player.position.z += payload.position.z;
+    // Keyboard inputs from the client sends their current position, their NEW rotation, and their NEW velocity.
+
+    player.position.x = payload.position.x;
+    player.position.y = payload.position.y;
+    player.position.z = payload.position.z;
+
+    player.velocity.x = payload.velocity.x;
+    player.velocity.y = payload.velocity.y;
+    player.velocity.z = payload.velocity.z;
 
     // Update the player's rotation
     player.rotation = payload.rotation;
