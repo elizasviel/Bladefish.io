@@ -78,7 +78,6 @@ export const Scene: React.FC = () => {
         payload: {
           id: id.current,
           velocity: { x: movement.x, y: movement.y, z: movement.z },
-          // TODO: Fix this so that the player's position is updated correctly.
           position: {
             x: position?.x,
             y: position?.y,
@@ -89,8 +88,30 @@ export const Scene: React.FC = () => {
       })
     );
   };
+  const handleKeyUp = (event: KeyboardEvent) => {
+    console.log("Scene: Handling key up event", event);
+    const position = playerRef.current?.translation();
+    const rotation = playerRef.current?.rotation();
+    socket.current?.send(
+      JSON.stringify({
+        type: "playerMovement",
+        payload: {
+          id: id.current,
+          velocity: { x: 0, y: 0, z: 0 },
+          position: {
+            x: position?.x,
+            y: position?.y,
+            z: position?.z,
+          },
+          rotation: { x: rotation?.x, y: rotation?.y, z: rotation?.z },
+        },
+      })
+    );
+  };
+
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     console.log("Scene: useEffect hook running");
     socket.current = new WebSocket("ws://localhost:8080");
@@ -121,6 +142,7 @@ export const Scene: React.FC = () => {
       console.log("Scene: Cleaning up WebSocket connection");
       socket.current?.close();
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -136,6 +158,10 @@ export const Scene: React.FC = () => {
       <OtherPlayers
         players={players.filter((player) => player.id !== id.current)}
       />
+      <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[25, 25]} />
+        <meshStandardMaterial color="grey" side={THREE.DoubleSide} />
+      </mesh>
     </>
   );
 };
@@ -166,10 +192,11 @@ const LocalPlayer: React.FC<{
   useFrame(() => {
     if (player && cameraRef.current && controlsRef.current) {
       // Update controls target to follow player
+      const position = playerRef.current?.translation();
       (controlsRef.current as any).target = new THREE.Vector3(
-        player.position.x,
-        player.position.y,
-        player.position.z
+        position?.x,
+        position?.y,
+        position?.z
       );
 
       // Update camera position
@@ -189,8 +216,8 @@ const LocalPlayer: React.FC<{
       <OrbitControls
         ref={controlsRef}
         minDistance={7}
-        maxDistance={7}
-        maxPolarAngle={Math.PI / 2}
+        maxDistance={10}
+        maxPolarAngle={Math.PI / 1.1}
         minPolarAngle={0.3}
       />
       <PerspectiveCamera ref={cameraRef} fov={75} />
