@@ -81,8 +81,10 @@ function handlePlayerMovement(payload: any) {
     player.velocity.y = payload.velocity.y;
     player.velocity.z = payload.velocity.z;
 
-    // Update the player's rotation
-    player.rotation = payload.rotation;
+    if (payload.rotation) {
+      // Update the player's rotation
+      player.rotation = payload.rotation;
+    }
 
     // Broadcast the current state to all connected clients
     publishState();

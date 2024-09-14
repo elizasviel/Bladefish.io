@@ -92,7 +92,7 @@ export const Scene: React.FC = () => {
   const handleKeyUp = (event: KeyboardEvent) => {
     console.log("Scene: Handling key up event", event);
     const position = playerRef.current?.translation();
-    const rotation = playerRef.current?.rotation();
+    //const rotation = playerRef.current?.rotation();
     socket.current?.send(
       JSON.stringify({
         type: "playerMovement",
@@ -104,7 +104,7 @@ export const Scene: React.FC = () => {
             y: position?.y,
             z: position?.z,
           },
-          rotation: { x: rotation?.x, y: rotation?.y, z: rotation?.z },
+          //rotation: { x: rotation?.x, y: rotation?.y, z: rotation?.z },
         },
       })
     );
