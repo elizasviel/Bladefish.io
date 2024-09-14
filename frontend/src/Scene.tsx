@@ -39,35 +39,36 @@ export const Scene: React.FC = () => {
     const direction = new THREE.Vector3();
     const sideDirection = new THREE.Vector3();
     camera.getWorldDirection(direction); // Get the direction the camera is facing
-    direction.y = 0; // Keep movement on the horizontal plane
+    //direction.y = 0; // Keep movement on the horizontal plane
     direction.normalize();
     sideDirection.copy(direction).cross(camera.up).normalize();
 
+    const pitch = Math.atan2(direction.y, direction.z);
+    let yaw: number;
     let movement: THREE.Vector3;
-    let rotation: number;
 
     switch (event.key) {
       case "w":
         movement = direction.multiplyScalar(1);
-        rotation = Math.atan2(direction.x, direction.z);
+        yaw = Math.atan2(direction.x, direction.z);
         break;
       case "s":
         movement = direction.multiplyScalar(-1);
-        rotation = Math.atan2(direction.x, direction.z);
+        yaw = Math.atan2(direction.x, direction.z);
         break;
       case "a":
         movement = sideDirection.multiplyScalar(-1);
-        rotation = Math.atan2(sideDirection.x, sideDirection.z);
+        yaw = Math.atan2(sideDirection.x, sideDirection.z);
         break;
       case "d":
         movement = sideDirection.multiplyScalar(1);
-        rotation = Math.atan2(sideDirection.x, sideDirection.z);
+        yaw = Math.atan2(sideDirection.x, sideDirection.z);
         break;
       default:
         return;
     }
     // Ensure rotation is within [0, 2π]
-    rotation = (rotation + 2 * Math.PI) % (2 * Math.PI);
+    //yaw = (yaw + 2 * Math.PI) % (2 * Math.PI);
 
     // Obtain the current position of the player so we can send it to the server
     const position = playerRef.current?.translation();
@@ -83,7 +84,7 @@ export const Scene: React.FC = () => {
             y: position?.y,
             z: position?.z,
           },
-          rotation: { x: 0, y: rotation, z: 0 },
+          rotation: { x: 0, y: yaw, z: 0 },
         },
       })
     );
@@ -189,8 +190,30 @@ const LocalPlayer: React.FC<{
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef(null);
 
+  console.log("PLAYER ROTATION", player?.rotation);
+  //console.log("PLAYER REF ROTATION", playerRef.current?.rotation());
+
   useFrame(() => {
     if (player && cameraRef.current && controlsRef.current) {
+      playerRef.current?.setLinvel(
+        {
+          x: player.velocity.x,
+          y: player.velocity.y,
+          z: player.velocity.z,
+        },
+        true
+      );
+
+      playerRef.current?.setRotation(
+        {
+          x: player.rotation.x,
+          y: player.rotation.y,
+          z: player.rotation.z,
+          w: 1,
+        },
+        true
+      );
+
       // Update controls target to follow player
       const position = playerRef.current?.translation();
       (controlsRef.current as any).target = new THREE.Vector3(
@@ -221,15 +244,7 @@ const LocalPlayer: React.FC<{
         minPolarAngle={0.3}
       />
       <PerspectiveCamera ref={cameraRef} fov={75} />
-      <RigidBody
-        ref={playerRef}
-        linearVelocity={[
-          player.velocity.x,
-          player.velocity.y,
-          player.velocity.z,
-        ]}
-        rotation={[player.rotation.x, player.rotation.y, player.rotation.z]}
-      >
+      <RigidBody ref={playerRef}>
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial attach="material-0" color="red" />
@@ -243,3 +258,5 @@ const LocalPlayer: React.FC<{
     </>
   );
 };
+
+//am I getting stale refs for rotation?
