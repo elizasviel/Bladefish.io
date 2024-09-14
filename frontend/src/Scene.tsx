@@ -67,8 +67,6 @@ export const Scene: React.FC = () => {
       default:
         return;
     }
-    // Ensure rotation is within [0, 2π]
-    //yaw = (yaw + 2 * Math.PI) % (2 * Math.PI);
 
     // Obtain the current position of the player so we can send it to the server
     const position = playerRef.current?.translation();
@@ -84,7 +82,7 @@ export const Scene: React.FC = () => {
             y: position?.y,
             z: position?.z,
           },
-          rotation: { x: 0, y: yaw, z: 0 },
+          rotation: { x: pitch, y: yaw, z: 0 },
         },
       })
     );
