@@ -52,26 +52,26 @@ export const Scene: React.FC = () => {
       case "w":
         movement.add(forward);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        rotation.x = 0;
+        //rotation.x = 0;
         rotation.z = 0;
         break;
       case "s":
         movement.sub(forward);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        rotation.x = 0;
+        //rotation.x = 0;
         rotation.z = 0;
         break;
       case "a":
         movement.sub(right);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        rotation.x = 0;
+        //rotation.x = 0;
         rotation.z = 0;
 
         break;
       case "d":
         movement.add(right);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        rotation.x = 0;
+        //rotation.x = 0;
         rotation.z = 0;
 
         break;
@@ -79,7 +79,7 @@ export const Scene: React.FC = () => {
         return;
     }
 
-    movement.y = 0; // Ensure movement is only horizontal
+    //movement.y = 0; // Ensure movement is only horizontal
     movement.normalize().multiplyScalar(5); // Adjust speed as needed
 
     // Obtain the current position of the player so we can send it to the server
