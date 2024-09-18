@@ -3,6 +3,7 @@ import { PerspectiveCamera, OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
+
 interface Player {
   id: string;
   position: {
@@ -19,6 +20,7 @@ interface Player {
     x: number;
     y: number;
     z: number;
+    w: number;
   };
 }
 
@@ -43,24 +45,28 @@ export const Scene: React.FC = () => {
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
 
     let movement = new THREE.Vector3();
-    let rotation = new THREE.Euler();
+    let rotation = new THREE.Quaternion();
 
     switch (event.key) {
       case "w":
         movement.add(forward);
-        rotation.setFromQuaternion(quaternion);
+        rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
+        rotation.x = 0;
+        rotation.z = 0;
         break;
       case "s":
         movement.sub(forward);
-        rotation.setFromQuaternion(quaternion).y += Math.PI;
+        rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
+        rotation.x = 0;
+        rotation.z = 0;
         break;
       case "a":
         movement.sub(right);
-        rotation.setFromQuaternion(quaternion).y += Math.PI / 2;
+
         break;
       case "d":
         movement.add(right);
-        rotation.setFromQuaternion(quaternion).y -= Math.PI / 2;
+
         break;
       default:
         return;
@@ -71,6 +77,9 @@ export const Scene: React.FC = () => {
 
     // Obtain the current position of the player so we can send it to the server
     const position = playerRef.current?.translation();
+
+    console.log("ROTATION", rotation);
+    console.log("YAW", rotation.y);
 
     socket.current?.send(
       JSON.stringify({
@@ -83,7 +92,12 @@ export const Scene: React.FC = () => {
             y: position?.y,
             z: position?.z,
           },
-          rotation: { x: 0, y: rotation.y, z: 0 },
+          rotation: {
+            x: rotation.x,
+            y: rotation.y,
+            z: rotation.z,
+            w: rotation.w,
+          },
         },
       })
     );
@@ -201,12 +215,13 @@ const LocalPlayer: React.FC<{
         true
       );
 
+      //quaternion
       playerRef.current?.setRotation(
         {
           x: player.rotation.x,
           y: player.rotation.y,
           z: player.rotation.z,
-          w: 1,
+          w: player.rotation.w,
         },
         true
       );
@@ -218,14 +233,6 @@ const LocalPlayer: React.FC<{
         position?.y,
         position?.z
       );
-
-      // Update camera position
-      cameraRef.current.position.sub((controlsRef.current as any).target);
-      cameraRef.current.position.setLength(7); // Fixed distance from player
-      cameraRef.current.position.add((controlsRef.current as any).target);
-
-      // Update controls
-      (controlsRef.current as any).update();
     }
   });
 
@@ -236,7 +243,7 @@ const LocalPlayer: React.FC<{
       <OrbitControls
         ref={controlsRef}
         minDistance={7}
-        maxDistance={10}
+        maxDistance={7}
         maxPolarAngle={Math.PI / 1.1}
         minPolarAngle={0.3}
       />

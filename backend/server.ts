@@ -19,6 +19,7 @@ interface Rotation {
   x: number;
   y: number;
   z: number;
+  w: number;
 }
 
 // Define interface for a player
@@ -53,7 +54,7 @@ function initializePlayer(ws: WebSocket) {
   const newPlayer: Player = {
     id: uuidv4(),
     position: { x: 0, y: 0, z: 0 },
-    rotation: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 0 },
     velocity: { x: 0, y: 0, z: 0 },
     ws: ws,
   };
@@ -72,18 +73,23 @@ function handlePlayerMovement(payload: any) {
   // If the player is found, update their position, velocity, and rotation
   if (player) {
     // Keyboard inputs from the client sends their current position, their NEW rotation, and their NEW velocity.
+    if (payload.position) {
+      player.position.x = payload.position.x;
+      player.position.y = payload.position.y;
+      player.position.z = payload.position.z;
+    }
 
-    player.position.x = payload.position.x;
-    player.position.y = payload.position.y;
-    player.position.z = payload.position.z;
-
-    player.velocity.x = payload.velocity.x;
-    player.velocity.y = payload.velocity.y;
-    player.velocity.z = payload.velocity.z;
+    if (payload.velocity) {
+      player.velocity.x = payload.velocity.x;
+      player.velocity.y = payload.velocity.y;
+      player.velocity.z = payload.velocity.z;
+    }
 
     if (payload.rotation) {
-      // Update the player's rotation
-      player.rotation = payload.rotation;
+      player.rotation.x = payload.rotation.x;
+      player.rotation.y = payload.rotation.y;
+      player.rotation.z = payload.rotation.z;
+      player.rotation.w = payload.rotation.w;
     }
 
     // Broadcast the current state to all connected clients
