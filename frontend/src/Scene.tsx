@@ -4,6 +4,7 @@ import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
+import { Model } from "../public/Dolphin.tsx";
 
 interface Player {
   id: string;
@@ -191,7 +192,7 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
   return (
     <>
       {players.map((player) => (
-        <mesh
+        <RigidBody
           key={player.id}
           position={[player.position.x, player.position.y, player.position.z]}
           quaternion={[
@@ -201,9 +202,8 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
             player.rotation.w,
           ]}
         >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color="blue" />
-        </mesh>
+          <Model />
+        </RigidBody>
       ))}
     </>
   );
@@ -282,15 +282,7 @@ const LocalPlayer: React.FC<{
       />
 
       <RigidBody ref={playerRef} lockRotations={true}>
-        <mesh>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial attach="material-0" color="red" />
-          <meshStandardMaterial attach="material-1" color="green" />
-          <meshStandardMaterial attach="material-2" color="blue" />
-          <meshStandardMaterial attach="material-3" color="yellow" />
-          <meshStandardMaterial attach="material-4" color="purple" />
-          <meshStandardMaterial attach="material-5" color="cyan" />
-        </mesh>
+        <Model />
       </RigidBody>
     </>
   );
