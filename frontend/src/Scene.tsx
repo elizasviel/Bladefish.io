@@ -4,7 +4,8 @@ import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
-import { Model } from "../public/Dolphin.tsx";
+import { Model as FishModel } from "./assets/Fish1.tsx";
+import { Model as DolphinModel } from "./assets/Dolphin.tsx";
 
 interface Player {
   id: string;
@@ -202,7 +203,7 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
             player.rotation.w,
           ]}
         >
-          <Model />
+          <FishModel />
         </RigidBody>
       ))}
     </>
@@ -282,7 +283,7 @@ const LocalPlayer: React.FC<{
       />
 
       <RigidBody ref={playerRef} lockRotations={true}>
-        <Model />
+        <FishModel />
       </RigidBody>
     </>
   );
