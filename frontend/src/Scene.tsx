@@ -194,6 +194,12 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
         <mesh
           key={player.id}
           position={[player.position.x, player.position.y, player.position.z]}
+          quaternion={[
+            player.rotation.x,
+            player.rotation.y,
+            player.rotation.z,
+            player.rotation.w,
+          ]}
         >
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial color="blue" />
@@ -210,7 +216,7 @@ const LocalPlayer: React.FC<{
   console.log("RENDERING LOCAL PLAYER");
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  useFrame(() => {
+  useFrame((state, delta, frame) => {
     if (player && controlsRef.current) {
       playerRef.current?.setLinvel(
         {
@@ -221,13 +227,29 @@ const LocalPlayer: React.FC<{
         true
       );
 
+      const currentRotation = new THREE.Quaternion(
+        playerRef.current?.rotation().x,
+        playerRef.current?.rotation().y,
+        playerRef.current?.rotation().z,
+        playerRef.current?.rotation().w
+      );
+
+      const targetRotation = new THREE.Quaternion(
+        player.rotation.x,
+        player.rotation.y,
+        player.rotation.z,
+        player.rotation.w
+      );
+
+      targetRotation.slerp(currentRotation, 50 * delta);
+
       //quaternion
       playerRef.current?.setRotation(
         {
-          x: player.rotation.x,
-          y: player.rotation.y,
-          z: player.rotation.z,
-          w: player.rotation.w,
+          x: targetRotation.x,
+          y: targetRotation.y,
+          z: targetRotation.z,
+          w: targetRotation.w,
         },
         true
       );
@@ -259,7 +281,7 @@ const LocalPlayer: React.FC<{
         enablePan={false}
       />
 
-      <RigidBody ref={playerRef}>
+      <RigidBody ref={playerRef} lockRotations={true}>
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial attach="material-0" color="red" />
