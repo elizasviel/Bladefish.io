@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { PerspectiveCamera, OrbitControls } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
+import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
@@ -31,7 +32,7 @@ export const Scene: React.FC = () => {
   console.log("Scene: Component rendering");
   const socket = useRef<WebSocket>();
   const id = useRef<string>(""); // This ref is used to store the ID of the local player
-  const [players, setPlayers] = useState<Player[]>([]); // State to store all players //perhaps useref?
+  const [players, setPlayers] = useState<Player[]>([]); // State to store all players
   const playerRef = useRef<RapierRigidBody>(null); // This ref is used to access the position of the player
   const { camera } = useThree();
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -62,10 +63,16 @@ export const Scene: React.FC = () => {
         break;
       case "a":
         movement.sub(right);
+        rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
+        rotation.x = 0;
+        rotation.z = 0;
 
         break;
       case "d":
         movement.add(right);
+        rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
+        rotation.x = 0;
+        rotation.z = 0;
 
         break;
       default:
@@ -201,11 +208,10 @@ const LocalPlayer: React.FC<{
   playerRef: React.RefObject<RapierRigidBody>;
 }> = ({ player, playerRef }) => {
   console.log("RENDERING LOCAL PLAYER");
-  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
-  const controlsRef = useRef(null);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
 
   useFrame(() => {
-    if (player && cameraRef.current && controlsRef.current) {
+    if (player && controlsRef.current) {
       playerRef.current?.setLinvel(
         {
           x: player.velocity.x,
@@ -228,11 +234,15 @@ const LocalPlayer: React.FC<{
 
       // Update controls target to follow player
       const position = playerRef.current?.translation();
-      (controlsRef.current as any).target = new THREE.Vector3(
-        position?.x,
-        position?.y,
-        position?.z
-      );
+      if (position) {
+        //if needed, set the camera manually
+        //controlsRef.current.object.position.set(
+        //  position.x,
+        //  position.y + 5,
+        //  position.z + 7
+        //);
+        controlsRef.current.target.set(position.x, position.y, position.z);
+      }
     }
   });
 
@@ -246,8 +256,9 @@ const LocalPlayer: React.FC<{
         maxDistance={7}
         maxPolarAngle={Math.PI / 1.1}
         minPolarAngle={0.3}
+        enablePan={false}
       />
-      <PerspectiveCamera ref={cameraRef} fov={75} />
+
       <RigidBody ref={playerRef}>
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
