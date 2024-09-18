@@ -29,44 +29,45 @@ export const Scene: React.FC = () => {
   console.log("Scene: Component rendering");
   const socket = useRef<WebSocket>();
   const id = useRef<string>(""); // This ref is used to store the ID of the local player
-  const [players, setPlayers] = useState<Player[]>([]); // State to store all players
+  const [players, setPlayers] = useState<Player[]>([]); // State to store all players //perhaps useref?
   const playerRef = useRef<RapierRigidBody>(null); // This ref is used to access the position of the player
   const { camera } = useThree();
   const handleKeyDown = (event: KeyboardEvent) => {
     console.log("Scene: Handling key down event", event);
     if (!camera) return;
 
-    const direction = new THREE.Vector3();
-    const sideDirection = new THREE.Vector3();
-    camera.getWorldDirection(direction); // Get the direction the camera is facing
-    //direction.y = 0; // Keep movement on the horizontal plane
-    direction.normalize();
-    sideDirection.copy(direction).cross(camera.up).normalize();
+    const quaternion = new THREE.Quaternion();
+    camera.getWorldQuaternion(quaternion);
 
-    const pitch = Math.atan2(direction.y, direction.z);
-    let yaw: number;
-    let movement: THREE.Vector3;
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
+
+    let movement = new THREE.Vector3();
+    let rotation = new THREE.Euler();
 
     switch (event.key) {
       case "w":
-        movement = direction.multiplyScalar(1);
-        yaw = Math.atan2(direction.x, direction.z);
+        movement.add(forward);
+        rotation.setFromQuaternion(quaternion);
         break;
       case "s":
-        movement = direction.multiplyScalar(-1);
-        yaw = Math.atan2(direction.x, direction.z);
+        movement.sub(forward);
+        rotation.setFromQuaternion(quaternion).y += Math.PI;
         break;
       case "a":
-        movement = sideDirection.multiplyScalar(-1);
-        yaw = Math.atan2(sideDirection.x, sideDirection.z);
+        movement.sub(right);
+        rotation.setFromQuaternion(quaternion).y += Math.PI / 2;
         break;
       case "d":
-        movement = sideDirection.multiplyScalar(1);
-        yaw = Math.atan2(sideDirection.x, sideDirection.z);
+        movement.add(right);
+        rotation.setFromQuaternion(quaternion).y -= Math.PI / 2;
         break;
       default:
         return;
     }
+
+    movement.y = 0; // Ensure movement is only horizontal
+    movement.normalize().multiplyScalar(5); // Adjust speed as needed
 
     // Obtain the current position of the player so we can send it to the server
     const position = playerRef.current?.translation();
@@ -82,7 +83,7 @@ export const Scene: React.FC = () => {
             y: position?.y,
             z: position?.z,
           },
-          rotation: { x: pitch, y: yaw, z: 0 },
+          rotation: { x: 0, y: rotation.y, z: 0 },
         },
       })
     );
@@ -157,7 +158,7 @@ export const Scene: React.FC = () => {
       <OtherPlayers
         players={players.filter((player) => player.id !== id.current)}
       />
-      <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh position={[0, -1, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[25, 25]} />
         <meshStandardMaterial color="grey" side={THREE.DoubleSide} />
       </mesh>
@@ -185,11 +186,9 @@ const LocalPlayer: React.FC<{
   player: Player | undefined;
   playerRef: React.RefObject<RapierRigidBody>;
 }> = ({ player, playerRef }) => {
+  console.log("RENDERING LOCAL PLAYER");
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef(null);
-
-  console.log("PLAYER ROTATION", player?.rotation);
-  //console.log("PLAYER REF ROTATION", playerRef.current?.rotation());
 
   useFrame(() => {
     if (player && cameraRef.current && controlsRef.current) {
@@ -256,5 +255,3 @@ const LocalPlayer: React.FC<{
     </>
   );
 };
-
-//am I getting stale refs for rotation?
