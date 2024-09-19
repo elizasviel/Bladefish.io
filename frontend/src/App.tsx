@@ -23,7 +23,6 @@ const App: React.FC = () => {
     <div>
       <KeyboardControls map={keyboardMap}>
         <Canvas
-          frameloop="demand"
           style={{
             width: "100vw",
             height: "100vh",

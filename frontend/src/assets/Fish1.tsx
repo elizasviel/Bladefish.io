@@ -5,7 +5,7 @@ Files: Fish1.glb [81.51KB] > /Users/normanqian/fractalcamp/gamesHackathon2/front
 */
 
 import * as THREE from "three";
-import React from "react";
+import React, { useEffect } from "react";
 import { useGraph } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { GLTF, SkeletonUtils } from "three-stdlib";
@@ -37,6 +37,12 @@ export function Model(props: JSX.IntrinsicElements["group"]) {
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(clone) as GLTFResult;
   const { actions } = useAnimations(animations, group);
+  useEffect(() => {
+    const swim = actions["Armature|Swim"];
+    if (swim) {
+      swim.play();
+    }
+  }, [actions]);
   return (
     <group ref={group} {...props} dispose={null}>
       <group name="Root_Scene">

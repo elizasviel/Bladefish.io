@@ -31,57 +31,56 @@ interface Player {
 //Local player sends their locally calculated position to the server, server sends the same position back to the local player, but also to all other clients.
 //The position of the local player should be reported to the server not not be set by it
 export const Scene: React.FC = () => {
-  console.log("Scene: Component rendering");
-  const socket = useRef<WebSocket>();
-  const id = useRef<string>(""); // This ref is used to store the ID of the local player
+  console.log("RENDERING SCENE");
+  const socket = useRef<WebSocket>(); // This ref is used to store the WebSocket instance
+  const id = useRef<string>(""); // We select the local player from the players array by their ID
   const [players, setPlayers] = useState<Player[]>([]); // State to store all players
   const playerRef = useRef<RapierRigidBody>(null); // This ref is used to access the position of the player
   const { camera } = useThree();
   const handleKeyDown = (event: KeyboardEvent) => {
-    console.log("Scene: Handling key down event", event);
-    if (!camera) return;
+    console.log("KEY DOWN", event);
 
     const quaternion = new THREE.Quaternion();
     camera.getWorldQuaternion(quaternion);
 
+    //Vectors are X, Y, Z
+    //Quaternions are X, Y, Z, W
+    //Camera looks down the negative z axis. Forward is therefore negative z
+    //Apply the camera's rotation to the forward and right vectors
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
 
     let movement = new THREE.Vector3();
     let rotation = new THREE.Quaternion();
 
+    //W and S are forward and backward
+    //Z is set to 0 to prevent the player from rolling
     switch (event.key) {
       case "w":
         movement.add(forward);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        //rotation.x = 0;
         rotation.z = 0;
         break;
       case "s":
         movement.sub(forward);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        //rotation.x = 0;
         rotation.z = 0;
         break;
       case "a":
         movement.sub(right);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        //rotation.x = 0;
         rotation.z = 0;
 
         break;
       case "d":
         movement.add(right);
         rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-        //rotation.x = 0;
         rotation.z = 0;
-
         break;
       default:
         return;
     }
 
-    //movement.y = 0; // Ensure movement is only horizontal
     movement.normalize().multiplyScalar(5); // Adjust speed as needed
 
     // Obtain the current position of the player so we can send it to the server
@@ -90,6 +89,7 @@ export const Scene: React.FC = () => {
     console.log("ROTATION", rotation);
     console.log("YAW", rotation.y);
 
+    //Packets identify who player is, where they are, what their rotation is, and what their velocity is
     socket.current?.send(
       JSON.stringify({
         type: "playerMovement",
@@ -114,7 +114,7 @@ export const Scene: React.FC = () => {
   const handleKeyUp = (event: KeyboardEvent) => {
     console.log("Scene: Handling key up event", event);
     const position = playerRef.current?.translation();
-    //const rotation = playerRef.current?.rotation();
+    const rotation = playerRef.current?.rotation();
     socket.current?.send(
       JSON.stringify({
         type: "playerMovement",
@@ -126,53 +126,59 @@ export const Scene: React.FC = () => {
             y: position?.y,
             z: position?.z,
           },
-          //rotation: { x: rotation?.x, y: rotation?.y, z: rotation?.z },
+          rotation: {
+            x: rotation?.x,
+            y: rotation?.y,
+            z: rotation?.z,
+            w: rotation?.w,
+          },
         },
       })
     );
   };
 
   useEffect(() => {
+    //Add event listeners for keyboard input
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
-    console.log("Scene: useEffect hook running");
+    console.log("EVENT LISTENERS ADDED");
     socket.current = new WebSocket("ws://localhost:8080");
-    console.log("Scene: WebSocket instance created");
+    console.log("WEBSOCKET INSTANCE CREATED");
 
     socket.current.onmessage = (event) => {
-      console.log("Scene: Received WebSocket message", event.data);
+      console.log("RECEIVED WEBSOCKET MESSAGE", event.data);
       const data = JSON.parse(event.data);
       switch (data.type) {
         case "state":
-          console.log("Scene: Updating players state", data.payload);
+          console.log("UPDATING PLAYERS STATE", data.payload);
           setPlayers(data.payload);
           break;
         case "id":
-          console.log("Scene: Received player ID", data.payload);
+          console.log("RECEIVED PLAYER ID", data.payload);
           id.current = data.payload;
           break;
         default:
-          console.log("Scene: Received unknown message type", data.type);
+          console.log("RECEIVED UNKNOWN MESSAGE TYPE", data.type);
       }
     };
 
     socket.current.onclose = () => {
-      console.log("Scene: WebSocket connection closed");
+      console.log("WEBSOCKET CONNECTION CLOSED");
     };
 
     return () => {
-      console.log("Scene: Cleaning up WebSocket connection");
+      console.log("CLEANING UP WEBSOCKET CONNECTION");
       socket.current?.close();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
-  console.log("Scene: Rendering players", players);
+  console.log("RENDERING PLAYERS", players);
   return (
     <>
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={1.5} />
       <pointLight position={[10, 10, 10]} />
       <LocalPlayer
         player={players.find((player) => player.id === id.current)}
@@ -202,6 +208,8 @@ const OtherPlayers: React.FC<{ players: Player[] }> = ({ players }) => {
             player.rotation.z,
             player.rotation.w,
           ]}
+          lockTranslations={true}
+          lockRotations={true}
         >
           <FishModel />
         </RigidBody>
@@ -218,6 +226,7 @@ const LocalPlayer: React.FC<{
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
   useFrame((state, delta, frame) => {
+    playerRef.current?.wakeUp();
     if (player && controlsRef.current) {
       playerRef.current?.setLinvel(
         {
@@ -282,7 +291,7 @@ const LocalPlayer: React.FC<{
         enablePan={false}
       />
 
-      <RigidBody ref={playerRef} lockRotations={true}>
+      <RigidBody ref={playerRef} lockRotations={true} lockTranslations={true}>
         <FishModel />
       </RigidBody>
     </>
