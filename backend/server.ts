@@ -96,7 +96,14 @@ function handlePlayerMovement(payload: any) {
     publishState();
 
     // Log the player's movement
-    console.log("Player moved:", player.id, "New position:", player.position);
+    console.log(
+      "Player moved:",
+      player.id,
+      "New position:",
+      player.position,
+      "New rotation:",
+      player.rotation
+    );
   } else {
     console.log("Player not found:", payload.id);
   }
