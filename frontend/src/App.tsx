@@ -29,7 +29,7 @@ const App: React.FC = () => {
             backgroundColor: "skyblue",
           }}
         >
-          <Physics interpolate={true} gravity={[0, 0, 0]} debug>
+          <Physics interpolate={true} gravity={[0, 0, 0]}>
             <Scene />
           </Physics>
         </Canvas>

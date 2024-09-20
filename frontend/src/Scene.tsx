@@ -210,13 +210,46 @@ export const Scene: React.FC = () => {
         .map((player) => (
           <Player key={player.id} player={player} />
         ))}
-      <CityScene0 scale={2} />
+      <CityScene0 scale={2} position={[-10, -10, -40]} />
+      <mesh position={[0, -5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[2000, 2000]} />
+        <meshStandardMaterial color="#b69f66" side={THREE.DoubleSide} />
+      </mesh>
     </>
   );
 };
 
 const Player: React.FC<{ player: Player }> = ({ player }) => {
   const playerRef = useRef<RapierRigidBody>(null);
+  //The first time a foreign player is rendered, we need to teleport them to their position
+  useEffect(() => {
+    playerRef.current?.wakeUp();
+    playerRef.current?.setTranslation(
+      {
+        x: player.position.x,
+        y: player.position.y,
+        z: player.position.z,
+      },
+      true
+    );
+    playerRef.current?.setLinvel(
+      {
+        x: player.velocity.x,
+        y: player.velocity.y,
+        z: player.velocity.z,
+      },
+      true
+    );
+    playerRef.current?.setRotation(
+      {
+        x: player.rotation.x,
+        y: player.rotation.y,
+        z: player.rotation.z,
+        w: player.rotation.w,
+      },
+      true
+    );
+  }, []);
   useFrame((state, delta, frame) => {
     playerRef.current?.wakeUp();
     if (playerRef.current) {
@@ -243,7 +276,7 @@ const Player: React.FC<{ player: Player }> = ({ player }) => {
         player.rotation.w
       );
 
-      targetRotation.slerp(currentRotation, 50 * delta);
+      //targetRotation.slerp(currentRotation, 50 * delta);
 
       playerRef.current?.setRotation(
         {
@@ -304,7 +337,7 @@ const LocalPlayer: React.FC<{
         player.rotation.w
       );
 
-      targetRotation.slerp(currentRotation, 50 * delta);
+      //targetRotation.slerp(currentRotation, 50 * delta);
 
       playerRef.current?.setRotation(
         {
