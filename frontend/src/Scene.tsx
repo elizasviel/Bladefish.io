@@ -8,6 +8,7 @@ import { Model as PufferModel } from "./assets/Puffer.tsx";
 import { Model as SharkModel } from "./assets/Shark.tsx";
 import { Model as SunfishModel } from "./assets/Sunfish.tsx";
 import { Model as SwordfishModel } from "./assets/Swordfish.tsx";
+import { Model as CityScene0 } from "./assets/CityScene0.tsx";
 
 interface Player {
   id: string;
@@ -105,7 +106,7 @@ export const Scene: React.FC = () => {
         return;
     }
 
-    movement.normalize().multiplyScalar(5);
+    movement.normalize().multiplyScalar(10);
 
     const position = playerRef.current?.translation();
 
@@ -209,8 +210,7 @@ export const Scene: React.FC = () => {
         .map((player) => (
           <Player key={player.id} player={player} />
         ))}
-
-      <UnderwaterTerrain />
+      <CityScene0 scale={2} />
     </>
   );
 };
@@ -265,7 +265,7 @@ const Player: React.FC<{ player: Player }> = ({ player }) => {
         lockTranslations={true}
         lockRotations={true}
       >
-        <PufferModel />
+        <SwordfishModel />
       </RigidBody>
     </>
   );
@@ -337,126 +337,8 @@ const LocalPlayer: React.FC<{
       />
 
       <RigidBody ref={playerRef} lockRotations={true} lockTranslations={true}>
-        <PufferModel />
+        <SharkModel scale={0.5} />
       </RigidBody>
     </>
-  );
-};
-
-const UnderwaterTerrain: React.FC = () => {
-  return (
-    <group>
-      {/* Ocean floor */}
-      <mesh position={[0, -20, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial color="#1e4d6b" />
-      </mesh>
-
-      {/* Ceiling */}
-      <mesh position={[0, 20, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial color="#0077be" transparent opacity={0.7} />
-      </mesh>
-
-      {/* Walls */}
-      <Wall position={[50, 0, 0]} rotation={[0, -Math.PI / 2, 0]} />
-      <Wall position={[-50, 0, 0]} rotation={[0, Math.PI / 2, 0]} />
-      <Wall position={[0, 0, 50]} rotation={[0, Math.PI, 0]} />
-      <Wall position={[0, 0, -50]} rotation={[0, 0, 0]} />
-
-      {/* Coral reef structures */}
-      <CoralReef position={[-15, -15, -15]} scale={[5, 10, 5]} />
-      <CoralReef position={[10, -18, 5]} scale={[8, 6, 8]} />
-      <CoralReef position={[0, -12, -20]} scale={[6, 15, 6]} />
-      <CoralReef position={[25, -16, 25]} scale={[7, 8, 7]} />
-      <CoralReef position={[-30, -14, 10]} scale={[5, 12, 5]} />
-
-      {/* Underwater caves */}
-      <UnderwaterCave position={[-5, -10, 10]} />
-      <UnderwaterCave position={[20, -5, -30]} scale={[1.5, 1.5, 1.5]} />
-
-      {/* Rock formations */}
-      <RockFormation position={[35, -18, -15]} scale={[3, 2, 3]} />
-      <RockFormation position={[-25, -15, 35]} scale={[2, 3, 2]} />
-    </group>
-  );
-};
-
-const Wall: React.FC<{
-  position: [number, number, number];
-  rotation: [number, number, number];
-}> = ({ position, rotation }) => {
-  return (
-    <mesh position={position} rotation={rotation}>
-      <planeGeometry args={[100, 40]} />
-      <meshStandardMaterial
-        color="#0077be"
-        transparent
-        opacity={0.5}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
-  );
-};
-
-const CoralReef: React.FC<{
-  position: [number, number, number];
-  scale: [number, number, number];
-}> = ({ position, scale }) => {
-  return (
-    <group position={position} scale={scale}>
-      <mesh>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#ff7f50" />
-      </mesh>
-      <mesh position={[0.5, 0.5, 0]}>
-        <boxGeometry args={[0.5, 0.5, 0.5]} />
-        <meshStandardMaterial color="#ff6347" />
-      </mesh>
-      <mesh position={[-0.3, 0.7, 0.3]}>
-        <boxGeometry args={[0.4, 0.4, 0.4]} />
-        <meshStandardMaterial color="#ffa07a" />
-      </mesh>
-    </group>
-  );
-};
-
-const UnderwaterCave: React.FC<{
-  position: [number, number, number];
-  scale?: [number, number, number];
-}> = ({ position, scale = [1, 1, 1] }) => {
-  return (
-    <group position={position} scale={scale}>
-      <mesh>
-        <boxGeometry args={[10, 8, 10]} />
-        <meshStandardMaterial color="#2f4f4f" side={THREE.BackSide} />
-      </mesh>
-      <mesh position={[0, -4, 5]}>
-        <boxGeometry args={[8, 1, 1]} />
-        <meshStandardMaterial color="#2f4f4f" />
-      </mesh>
-    </group>
-  );
-};
-
-const RockFormation: React.FC<{
-  position: [number, number, number];
-  scale: [number, number, number];
-}> = ({ position, scale }) => {
-  return (
-    <group position={position} scale={scale}>
-      <mesh>
-        <dodecahedronGeometry args={[2]} />
-        <meshStandardMaterial color="#4a4a4a" />
-      </mesh>
-      <mesh position={[1.5, -1, 1]}>
-        <dodecahedronGeometry args={[1.5]} />
-        <meshStandardMaterial color="#3a3a3a" />
-      </mesh>
-      <mesh position={[-1, 1, -1]}>
-        <dodecahedronGeometry args={[1]} />
-        <meshStandardMaterial color="#5a5a5a" />
-      </mesh>
-    </group>
   );
 };
