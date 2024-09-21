@@ -2,18 +2,9 @@ import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import { KeyboardControls } from "@react-three/drei";
 import { Scene } from "./Scene";
+import { Loading } from "./Loading";
 import { ChatBox } from "./ChatBox";
 import { useState, useRef, useEffect } from "react";
-
-interface ChatMessage {
-  playerId: string;
-  message: string;
-  timestamp: number;
-}
-
-interface ChatLog {
-  messages: ChatMessage[];
-}
 
 interface Player {
   id: string;
@@ -33,7 +24,14 @@ interface Player {
     z: number;
     w: number;
   };
-  lastChatMessage?: ChatMessage;
+  currentAction: string;
+  chatBubble: string;
+}
+
+interface ChatMessage {
+  playerId: string;
+  message: string;
+  timestamp: number;
 }
 
 const keyboardMap = [
@@ -41,29 +39,21 @@ const keyboardMap = [
   { name: "backward", keys: ["s", "S"] },
   { name: "left", keys: ["a", "A"] },
   { name: "right", keys: ["d", "D"] },
-  { name: "jump", keys: [" "] },
+  { name: "spacebar", keys: [" "] },
 ];
 
 const App: React.FC = () => {
   console.log("RENDERING APP");
-  const [isConnected, setIsConnected] = useState(false);
-  const [serverFull, setServerFull] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [chatLog, setChatLog] = useState<ChatLog>({ messages: [] });
+  const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
   const socket = useRef<WebSocket>();
   const id = useRef<string>("");
 
-  if (serverFull) {
-    return <div>Server is full</div>;
-  }
-
   useEffect(() => {
     socket.current = new WebSocket("ws://localhost:8080");
-    console.log("SOCKET CREATED");
 
     socket.current.onopen = () => {
-      console.log("WebSocket connected");
-      setIsConnected(true);
+      console.log("WEBSOCKET CONNECTION OPENED");
     };
 
     socket.current.onmessage = (event) => {
@@ -80,7 +70,6 @@ const App: React.FC = () => {
           break;
         case "serverFull":
           console.log("SERVER IS FULL", data.payload);
-          setServerFull(true);
           break;
         case "chatLog":
           console.log("RECEIVED CHAT LOG", data.payload);
@@ -93,7 +82,6 @@ const App: React.FC = () => {
 
     socket.current.onclose = () => {
       console.log("WEBSOCKET CONNECTION CLOSED");
-      setIsConnected(false);
     };
 
     return () => {
@@ -103,36 +91,36 @@ const App: React.FC = () => {
     };
   }, []);
 
-  if (!isConnected) {
-    return <div>Loading...</div>;
+  if (!socket.current) {
+    return <Loading />;
+  } else {
+    return (
+      <div>
+        <KeyboardControls map={keyboardMap}>
+          <Canvas
+            style={{
+              width: "100vw",
+              height: "100vh",
+              backgroundColor: "skyblue",
+            }}
+          >
+            <Physics interpolate={true} gravity={[0, 0, 0]}>
+              <Scene
+                socket={socket.current}
+                playerId={id.current}
+                players={players}
+              />
+            </Physics>
+          </Canvas>
+          <ChatBox
+            socket={socket.current}
+            playerId={id.current}
+            chatLog={chatLog}
+          />
+        </KeyboardControls>
+      </div>
+    );
   }
-
-  return (
-    <div>
-      <KeyboardControls map={keyboardMap}>
-        <Canvas
-          style={{
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "skyblue",
-          }}
-        >
-          <Physics interpolate={true} gravity={[0, 0, 0]}>
-            <Scene
-              socket={socket.current!}
-              playerId={id.current}
-              players={players}
-            />
-          </Physics>
-        </Canvas>
-        <ChatBox
-          socket={socket.current!}
-          playerId={id.current}
-          chatLog={chatLog}
-        />
-      </KeyboardControls>
-    </div>
-  );
 };
 
 export default App;

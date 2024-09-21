@@ -8,10 +8,6 @@ interface ChatMessage {
   timestamp: number;
 }
 
-interface ChatLog {
-  messages: ChatMessage[];
-}
-
 // Define interfaces for position and rotation
 interface Position {
   x: number;
@@ -38,17 +34,17 @@ interface Player {
   position: Position;
   rotation: Rotation;
   velocity: Velocity;
-  lastChatMessage?: ChatMessage;
+  currentAction: string;
+  chatBubble: string;
   ws: WebSocket;
 }
 
 // Create a WebSocket server on port 8080
 const wss = new WebSocket.Server({ port: 8080 });
-
 // Initialize an array to store connected players
 let players: Player[] = [];
 // Initialize a chat log to store chat messages
-let chatLog: ChatLog = { messages: [] };
+let chatLog: ChatMessage[] = [];
 // Function to broadcast the current state to all connected clients
 function publishState() {
   const state = { type: "state", payload: players };
@@ -57,34 +53,53 @@ function publishState() {
       client.send(JSON.stringify(state));
     }
   });
-  console.log("State published");
+  console.log(
+    "STATE PUBLISHED",
+    players.map((p) => [
+      p.id,
+      p.position,
+      p.rotation,
+      p.velocity,
+      p.chatBubble,
+      p.currentAction,
+    ])
+  );
 }
-
 // Function to initialize a player
 function initializePlayer(ws: WebSocket) {
-  console.log(players);
-  console.log(players.length);
-  if (players.length >= 25) {
+  if (players.length >= 10) {
     ws.send(JSON.stringify({ type: "serverFull", payload: "Server is full" }));
     ws.close();
     return false;
+  } else {
+    const newPlayer: Player = {
+      id: uuidv4(),
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      currentAction: "",
+      chatBubble: "",
+      ws: ws,
+    };
+    // Add the new player to the players array
+    players.push(newPlayer);
+    // Send the player's ID to the client
+    ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
+    // Broadcast the current state to all connected clients
+    publishState();
+    console.log(
+      "NEW PLAYER CONNECTED. CURRENT PLAYERS: ",
+      players.map((p) => [
+        p.id,
+        p.position,
+        p.rotation,
+        p.velocity,
+        p.chatBubble,
+        p.currentAction,
+      ])
+    );
+    return true;
   }
-
-  // Create a new player object with the generated ID, initial position, rotation, and WebSocket connection
-  const newPlayer: Player = {
-    id: uuidv4(),
-    position: { x: 0, y: 0, z: 0 },
-    rotation: { x: 0, y: 0, z: 0, w: 0 },
-    velocity: { x: 0, y: 0, z: 0 },
-    ws: ws,
-  };
-  // Add the new player to the players array
-  players.push(newPlayer);
-  // Send the player's ID to the client
-  ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
-  // Broadcast the current state to all connected clients
-  publishState();
-  return true;
 }
 
 function publishChatLog() {
@@ -94,27 +109,30 @@ function publishChatLog() {
       client.send(JSON.stringify(chatLogMessage));
     }
   });
+  console.log("Chat log published, ", chatLog);
 }
 
-function handleChatMessage(playerId: string, message: string) {
-  // Add the chat message to the chat log
-  chatLog.messages.push({
-    playerId,
-    message,
+function handleChatMessage(payload: any) {
+  // Add the chat message to the chat log, and publish it to all connected clients
+  chatLog.push({
+    playerId: payload.playerId,
+    message: payload.message,
     timestamp: Date.now(),
   });
-  // Publish the chat log to all connected clients
   publishChatLog();
 
-  const player = players.find((p) => p.id === playerId);
+  // Also, update the player's chat bubble to display the message
+  const player = players.find((p) => p.id === payload.playerId);
   if (player) {
-    const chatMessage: ChatMessage = {
-      playerId,
-      message,
-      timestamp: Date.now(),
-    };
-    player.lastChatMessage = chatMessage;
-    //Also publish the state to all connected clients
+    player.chatBubble = payload.message;
+    publishState();
+  }
+}
+
+function handleAction(payload: any) {
+  const player = players.find((p) => p.id === payload.playerId);
+  if (player) {
+    player.currentAction = payload.action;
     publishState();
   }
 }
@@ -164,33 +182,34 @@ function handlePlayerMovement(payload: any) {
 
 // Set up WebSocket server event listeners
 wss.on("connection", (ws: WebSocket) => {
-  console.log("New client connected");
-
   // Initialize the player
-  if (!initializePlayer(ws)) {
-    console.log("Connection rejected: Server is full");
+  if (initializePlayer(ws)) {
+    console.log("NEW PLAYER CONNECTED");
+    // Add event listener to the WebSocket connection for incoming messages
+    ws.on("message", (message: WebSocket.Data) => {
+      const data = JSON.parse(message.toString());
+      switch (data.type) {
+        case "playerMovement":
+          handlePlayerMovement(data.payload);
+          break;
+        case "chatMessage":
+          handleChatMessage(data.payload);
+          break;
+        case "action":
+          handleAction(data.payload);
+          break;
+      }
+    });
+    // Handle client disconnection
+    ws.on("close", () => {
+      players = players.filter((p) => p.ws !== ws);
+      console.log("PLAYER DISCONNECTED");
+      publishState();
+    });
+  } else {
+    console.log("CONNECTION REJECTED: SERVER IS FULL");
     return;
   }
-
-  // Add event listener to the WebSocket connection for incoming messages
-  ws.on("message", (message: WebSocket.Data) => {
-    const data = JSON.parse(message.toString());
-    switch (data.type) {
-      case "playerMovement":
-        handlePlayerMovement(data.payload);
-        break;
-      case "chatMessage":
-        handleChatMessage(data.payload.playerId, data.payload.message);
-        break;
-    }
-  });
-
-  // Handle client disconnection
-  ws.on("close", () => {
-    players = players.filter((p) => p.ws !== ws);
-    console.log("Player disconnected.");
-    publishState();
-  });
 });
 
-console.log("WebSocket server is running on ws://localhost:8080");
+console.log("WEBSOCKET SERVER IS RUNNING ON ws://localhost:8080");

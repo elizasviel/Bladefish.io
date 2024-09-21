@@ -5,7 +5,7 @@ Files: Swordfish.glb [150.64KB] > /Users/normanqian/fractalcamp/gamesHackathon2/
 */
 
 import * as THREE from "three";
-import React from "react";
+import React, { useEffect } from "react";
 import { useGraph } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { GLTF, SkeletonUtils } from "three-stdlib";
@@ -39,12 +39,30 @@ type GLTFResult = GLTF & {
   animations: GLTFAction[];
 };
 
-export function Model(props: JSX.IntrinsicElements["group"]) {
+export function Model({
+  isLocal,
+  ...props
+}: { isLocal: boolean } & JSX.IntrinsicElements["group"]) {
   const group = React.useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF("/Swordfish-transformed.glb");
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(clone) as GLTFResult;
   const { actions } = useAnimations(animations, group);
+
+  useEffect(() => {
+    if (isLocal) {
+      window.addEventListener("click", () => {
+        actions["Fish_Armature|Attack"]?.setLoop(THREE.LoopOnce, 1);
+        actions["Fish_Armature|Attack"]?.play();
+        actions["Fish_Armature|Attack"]?.reset();
+      });
+
+      setTimeout(() => {
+        actions["Fish_Armature|Attack"]?.reset();
+      }, 1000);
+    }
+  }, []);
+
   return (
     <group ref={group} {...props} dispose={null}>
       <group name="Root_Scene">
