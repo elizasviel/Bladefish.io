@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { OrbitControls, MeshPortalMaterial, Text } from "@react-three/drei";
+import {
+  OrbitControls,
+  MeshPortalMaterial,
+  Text,
+  Billboard,
+} from "@react-three/drei";
 import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -394,46 +399,39 @@ const ChatBubble: React.FC<{ message: string | undefined }> = ({ message }) => {
   }, [message]);
 
   return (
-    <group position={[0, 2, 0]}>
-      {/* Front text */}
-      <Text
-        position={[0, 0, 0.02]}
-        fontSize={0.5}
-        maxWidth={bubbleSize.width - 0.4}
-        lineHeight={1}
-        letterSpacing={0.02}
-        textAlign="center"
-        anchorX="center"
-        anchorY="middle"
-        color="black"
-      >
-        {message}
-        <meshStandardMaterial color="black" side={THREE.DoubleSide} />
-      </Text>
+    <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+      <group position={[0, 2, 0]}>
+        {/* Front text */}
+        <Text
+          position={[0, 0, 0.02]}
+          fontSize={0.5}
+          maxWidth={bubbleSize.width - 0.4}
+          lineHeight={1}
+          letterSpacing={0.02}
+          textAlign="center"
+          anchorX="center"
+          anchorY="middle"
+          color="black"
+          overflowWrap="break-word"
+        >
+          {message}
+          <meshStandardMaterial color="black" side={THREE.DoubleSide} />
+        </Text>
 
-      {/* Back text (rotated 180 degrees) */}
-      <Text
-        position={[0, 0, -0.02]}
-        rotation={[0, Math.PI, 0]}
-        fontSize={0.5}
-        maxWidth={bubbleSize.width - 0.4}
-        lineHeight={1}
-        letterSpacing={0.02}
-        textAlign="center"
-        anchorX="center"
-        anchorY="middle"
-        color="black"
-      >
-        {message}
-        <meshStandardMaterial color="black" side={THREE.DoubleSide} />
-      </Text>
-      <RoundedRectangle
-        width={bubbleSize.width}
-        height={bubbleSize.height}
-        radius={0.2}
-        depth={0.01}
-      />
-    </group>
+        <RoundedRectangle
+          width={bubbleSize.width}
+          height={bubbleSize.height}
+          radius={0.2}
+          depth={0.01}
+        />
+        <TriangularPoint
+          width={0.3}
+          height={0.3}
+          depth={0.01}
+          position={[-bubbleSize.width * 0.25, -bubbleSize.height / 2, 0]}
+        />
+      </group>
+    </Billboard>
   );
 };
 
@@ -468,6 +466,32 @@ const RoundedRectangle: React.FC<{
 
   return (
     <mesh>
+      <extrudeGeometry args={[shape, extrudeSettings]} />
+      <meshStandardMaterial color="white" side={THREE.DoubleSide} />
+    </mesh>
+  );
+};
+
+const TriangularPoint: React.FC<{
+  width: number;
+  height: number;
+  depth: number;
+  position: [number, number, number];
+}> = ({ width, height, depth, position }) => {
+  const shape = new THREE.Shape();
+  shape.moveTo(-width / 2, 0);
+  shape.lineTo(width / 2, 0);
+  shape.lineTo(0, -height);
+  shape.lineTo(-width / 2, 0);
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: depth,
+    bevelEnabled: false,
+  };
+
+  return (
+    <mesh position={position}>
       <extrudeGeometry args={[shape, extrudeSettings]} />
       <meshStandardMaterial color="white" side={THREE.DoubleSide} />
     </mesh>
