@@ -8,8 +8,13 @@ export const ChatBubble: React.FC<{ message: string | undefined }> = ({
   if (!message) return null;
 
   const [bubbleSize, setBubbleSize] = useState({ width: 2.2, height: 1.2 });
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => {
+    setTimeout(() => {
+      setExpired(true);
+    }, 5000);
+
     // Calculate the size based on the message length
     const minWidth = 2.2;
     const minHeight = 1.2;
@@ -23,41 +28,43 @@ export const ChatBubble: React.FC<{ message: string | undefined }> = ({
     setBubbleSize({ width, height });
   }, [message]);
 
-  return (
-    <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-      <group position={[0, 2, 0]}>
-        {/* Front text */}
-        <Text
-          position={[0, 0, 0.02]}
-          fontSize={0.5}
-          maxWidth={bubbleSize.width - 0.4}
-          lineHeight={1}
-          letterSpacing={0.02}
-          textAlign="center"
-          anchorX="center"
-          anchorY="middle"
-          color="black"
-          overflowWrap="break-word"
-        >
-          {message}
-          <meshStandardMaterial color="black" side={THREE.DoubleSide} />
-        </Text>
+  if (expired) return null;
+  else
+    return (
+      <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+        <group position={[0, 2, 0]}>
+          {/* Front text */}
+          <Text
+            position={[0, 0, 0.02]}
+            fontSize={0.5}
+            maxWidth={bubbleSize.width - 0.4}
+            lineHeight={1}
+            letterSpacing={0.02}
+            textAlign="center"
+            anchorX="center"
+            anchorY="middle"
+            color="black"
+            overflowWrap="break-word"
+          >
+            {message}
+            <meshStandardMaterial color="black" side={THREE.DoubleSide} />
+          </Text>
 
-        <RoundedRectangle
-          width={bubbleSize.width}
-          height={bubbleSize.height}
-          radius={0.2}
-          depth={0.01}
-        />
-        <TriangularPoint
-          width={0.3}
-          height={0.3}
-          depth={0.01}
-          position={[-bubbleSize.width * 0.25, -bubbleSize.height / 2, 0]}
-        />
-      </group>
-    </Billboard>
-  );
+          <RoundedRectangle
+            width={bubbleSize.width}
+            height={bubbleSize.height}
+            radius={0.2}
+            depth={0.01}
+          />
+          <TriangularPoint
+            width={0.3}
+            height={0.3}
+            depth={0.01}
+            position={[-bubbleSize.width * 0.25, -bubbleSize.height / 2, 0]}
+          />
+        </group>
+      </Billboard>
+    );
 };
 
 const RoundedRectangle: React.FC<{

@@ -85,8 +85,10 @@ function initializePlayer(ws: WebSocket) {
     players.push(newPlayer);
     // Send the player's ID to the client
     ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
-    // Broadcast the current state to all connected clients
+    // Broadcast the current state and chat log to all connected clients
     publishState();
+    publishChatLog();
+
     console.log(
       "NEW PLAYER CONNECTED. CURRENT PLAYERS: ",
       players.map((p) => [
