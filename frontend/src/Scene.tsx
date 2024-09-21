@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, MeshPortalMaterial, Text } from "@react-three/drei";
 import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -9,6 +9,16 @@ import { Model as SharkModel } from "./assets/Shark.tsx";
 import { Model as SunfishModel } from "./assets/Sunfish.tsx";
 import { Model as SwordfishModel } from "./assets/Swordfish.tsx";
 import { Model as CityScene0 } from "./assets/CityScene0.tsx";
+
+interface ChatMessage {
+  playerId: string;
+  message: string;
+  timestamp: number;
+}
+
+interface ChatLog {
+  messages: ChatMessage[];
+}
 
 interface Player {
   id: string;
@@ -28,21 +38,17 @@ interface Player {
     z: number;
     w: number;
   };
+  lastChatMessage?: ChatMessage;
 }
 
-export const Scene: React.FC = () => {
+export const Scene: React.FC<{
+  socket: WebSocket;
+  playerId: string;
+  players: Player[];
+}> = ({ socket, playerId, players }) => {
   console.log("RENDERING SCENE");
-  const socket = useRef<WebSocket>();
-  const id = useRef<string>("");
-  const [players, setPlayers] = useState<Player[]>([]);
   const playerRef = useRef<RapierRigidBody>(null);
   const { camera } = useThree();
-
-  //global vs local rotations
-  //perhaps rotate mesh instead of rigidbody
-  //options: set rapier rigidbody local z rotation to 0
-  //rotate mesh, which takes local rotation, instead of rigidbody which is global
-  //calculate the the rapier rigidbody global z rotation that would make local z rotation 0
 
   const handleClick = () => {
     console.log("CLICKED");
@@ -111,11 +117,11 @@ export const Scene: React.FC = () => {
     const position = playerRef.current?.translation();
 
     console.log("SENDING PLAYER MOVEMENT", movement, rotation);
-    socket.current?.send(
+    socket.send(
       JSON.stringify({
         type: "playerMovement",
         payload: {
-          id: id.current,
+          id: playerId,
           velocity: { x: movement.x, y: movement.y, z: movement.z },
           position: {
             x: position?.x,
@@ -137,11 +143,11 @@ export const Scene: React.FC = () => {
     console.log("Scene: Handling key up event", event);
     const position = playerRef.current?.translation();
     const rotation = playerRef.current?.rotation();
-    socket.current?.send(
+    socket.send(
       JSON.stringify({
         type: "playerMovement",
         payload: {
-          id: id.current,
+          id: playerId,
           velocity: { x: 0, y: 0, z: 0 },
           position: {
             x: position?.x,
@@ -163,34 +169,9 @@ export const Scene: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
-    console.log("EVENT LISTENERS ADDED");
-    socket.current = new WebSocket("ws://localhost:8080");
-    console.log("WEBSOCKET INSTANCE CREATED");
-
-    socket.current.onmessage = (event) => {
-      console.log("RECEIVED WEBSOCKET MESSAGE", event.data);
-      const data = JSON.parse(event.data);
-      switch (data.type) {
-        case "state":
-          console.log("UPDATING PLAYERS STATE", data.payload);
-          setPlayers(data.payload);
-          break;
-        case "id":
-          console.log("RECEIVED PLAYER ID", data.payload);
-          id.current = data.payload;
-          break;
-        default:
-          console.log("RECEIVED UNKNOWN MESSAGE TYPE", data.type);
-      }
-    };
-
-    socket.current.onclose = () => {
-      console.log("WEBSOCKET CONNECTION CLOSED");
-    };
-
     return () => {
       console.log("CLEANING UP WEBSOCKET CONNECTION");
-      socket.current?.close();
+      socket.close();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
@@ -202,11 +183,11 @@ export const Scene: React.FC = () => {
       <ambientLight intensity={1.5} />
       <pointLight position={[10, 10, 10]} />
       <LocalPlayer
-        player={players.find((player) => player.id === id.current)}
+        player={players.find((player) => player.id === playerId)}
         playerRef={playerRef}
       />
       {players
-        .filter((player) => player.id !== id.current)
+        .filter((player) => player.id !== playerId)
         .map((player) => (
           <Player key={player.id} player={player} />
         ))}
@@ -215,6 +196,21 @@ export const Scene: React.FC = () => {
         <planeGeometry args={[2000, 2000]} />
         <meshStandardMaterial color="#b69f66" side={THREE.DoubleSide} />
       </mesh>
+      <mesh position={[20, 15, -49]}>
+        <circleGeometry args={[7, 20]}></circleGeometry>
+        <MeshPortalMaterial />
+      </mesh>
+      <RigidBody colliders="trimesh" type="fixed" position={[0, 20, 0]}>
+        <mesh>
+          <boxGeometry args={[100, 50, 100]}></boxGeometry>
+          <meshStandardMaterial
+            color="#b69f66"
+            transparent={true}
+            opacity={0.3}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      </RigidBody>
     </>
   );
 };
@@ -299,6 +295,7 @@ const Player: React.FC<{ player: Player }> = ({ player }) => {
         lockRotations={true}
       >
         <SwordfishModel />
+        <ChatBubble message={player.lastChatMessage?.message} />
       </RigidBody>
     </>
   );
@@ -369,9 +366,110 @@ const LocalPlayer: React.FC<{
         enablePan={false}
       />
 
-      <RigidBody ref={playerRef} lockRotations={true} lockTranslations={true}>
-        <SharkModel scale={0.5} />
+      <RigidBody ref={playerRef} lockRotations={true} colliders="ball">
+        <SwordfishModel scale={0.5} />
+        <ChatBubble message={player.lastChatMessage?.message} />
       </RigidBody>
     </>
+  );
+};
+
+const ChatBubble: React.FC<{ message: string | undefined }> = ({ message }) => {
+  if (!message) return null;
+
+  const [bubbleSize, setBubbleSize] = useState({ width: 2.2, height: 1.2 });
+
+  useEffect(() => {
+    // Calculate the size based on the message length
+    const minWidth = 2.2;
+    const minHeight = 1.2;
+    const charsPerLine = 10;
+    const linesPerUnit = 2;
+
+    const lines = Math.ceil(message.length / charsPerLine);
+    const width = Math.max(minWidth, message.length * 0.2);
+    const height = Math.max(minHeight, lines / linesPerUnit);
+
+    setBubbleSize({ width, height });
+  }, [message]);
+
+  return (
+    <group position={[0, 2, 0]}>
+      {/* Front text */}
+      <Text
+        position={[0, 0, 0.02]}
+        fontSize={0.5}
+        maxWidth={bubbleSize.width - 0.4}
+        lineHeight={1}
+        letterSpacing={0.02}
+        textAlign="center"
+        anchorX="center"
+        anchorY="middle"
+        color="black"
+      >
+        {message}
+        <meshStandardMaterial color="black" side={THREE.DoubleSide} />
+      </Text>
+
+      {/* Back text (rotated 180 degrees) */}
+      <Text
+        position={[0, 0, -0.02]}
+        rotation={[0, Math.PI, 0]}
+        fontSize={0.5}
+        maxWidth={bubbleSize.width - 0.4}
+        lineHeight={1}
+        letterSpacing={0.02}
+        textAlign="center"
+        anchorX="center"
+        anchorY="middle"
+        color="black"
+      >
+        {message}
+        <meshStandardMaterial color="black" side={THREE.DoubleSide} />
+      </Text>
+      <RoundedRectangle
+        width={bubbleSize.width}
+        height={bubbleSize.height}
+        radius={0.2}
+        depth={0.01}
+      />
+    </group>
+  );
+};
+
+const RoundedRectangle: React.FC<{
+  width: number;
+  height: number;
+  radius: number;
+  depth: number;
+}> = ({ width, height, radius, depth }) => {
+  const shape = new THREE.Shape();
+  const x = -width / 2;
+  const y = -height / 2;
+
+  shape.moveTo(x + radius, y);
+  shape.lineTo(x + width - radius, y);
+  shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+  shape.lineTo(x + width, y + height - radius);
+  shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  shape.lineTo(x + radius, y + height);
+  shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+  shape.lineTo(x, y + radius);
+  shape.quadraticCurveTo(x, y, x + radius, y);
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: depth,
+    bevelEnabled: true,
+    bevelThickness: depth * 0.2,
+    bevelSize: radius * 0.5,
+    bevelSegments: 16,
+  };
+
+  return (
+    <mesh>
+      <extrudeGeometry args={[shape, extrudeSettings]} />
+      <meshStandardMaterial color="white" side={THREE.DoubleSide} />
+    </mesh>
   );
 };

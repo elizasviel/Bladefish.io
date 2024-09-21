@@ -2,6 +2,16 @@
 import WebSocket from "ws";
 import { v4 as uuidv4 } from "uuid";
 
+interface ChatMessage {
+  playerId: string;
+  message: string;
+  timestamp: number;
+}
+
+interface ChatLog {
+  messages: ChatMessage[];
+}
+
 // Define interfaces for position and rotation
 interface Position {
   x: number;
@@ -28,6 +38,7 @@ interface Player {
   position: Position;
   rotation: Rotation;
   velocity: Velocity;
+  lastChatMessage?: ChatMessage;
   ws: WebSocket;
 }
 
@@ -36,7 +47,8 @@ const wss = new WebSocket.Server({ port: 8080 });
 
 // Initialize an array to store connected players
 let players: Player[] = [];
-
+// Initialize a chat log to store chat messages
+let chatLog: ChatLog = { messages: [] };
 // Function to broadcast the current state to all connected clients
 function publishState() {
   const state = { type: "state", payload: players };
@@ -50,6 +62,14 @@ function publishState() {
 
 // Function to initialize a player
 function initializePlayer(ws: WebSocket) {
+  console.log(players);
+  console.log(players.length);
+  if (players.length >= 25) {
+    ws.send(JSON.stringify({ type: "serverFull", payload: "Server is full" }));
+    ws.close();
+    return false;
+  }
+
   // Create a new player object with the generated ID, initial position, rotation, and WebSocket connection
   const newPlayer: Player = {
     id: uuidv4(),
@@ -64,6 +84,39 @@ function initializePlayer(ws: WebSocket) {
   ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
   // Broadcast the current state to all connected clients
   publishState();
+  return true;
+}
+
+function publishChatLog() {
+  const chatLogMessage = { type: "chatLog", payload: chatLog };
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(chatLogMessage));
+    }
+  });
+}
+
+function handleChatMessage(playerId: string, message: string) {
+  // Add the chat message to the chat log
+  chatLog.messages.push({
+    playerId,
+    message,
+    timestamp: Date.now(),
+  });
+  // Publish the chat log to all connected clients
+  publishChatLog();
+
+  const player = players.find((p) => p.id === playerId);
+  if (player) {
+    const chatMessage: ChatMessage = {
+      playerId,
+      message,
+      timestamp: Date.now(),
+    };
+    player.lastChatMessage = chatMessage;
+    //Also publish the state to all connected clients
+    publishState();
+  }
 }
 
 // Function to handle player movement
@@ -114,7 +167,10 @@ wss.on("connection", (ws: WebSocket) => {
   console.log("New client connected");
 
   // Initialize the player
-  initializePlayer(ws);
+  if (!initializePlayer(ws)) {
+    console.log("Connection rejected: Server is full");
+    return;
+  }
 
   // Add event listener to the WebSocket connection for incoming messages
   ws.on("message", (message: WebSocket.Data) => {
@@ -122,6 +178,9 @@ wss.on("connection", (ws: WebSocket) => {
     switch (data.type) {
       case "playerMovement":
         handlePlayerMovement(data.payload);
+        break;
+      case "chatMessage":
+        handleChatMessage(data.payload.playerId, data.payload.message);
         break;
     }
   });
