@@ -106,7 +106,7 @@ export const Player: React.FC<{ player: Player }> = ({ player }) => {
         lockTranslations={true}
         lockRotations={true}
       >
-        <SwordfishModel isLocal={false} scale={0.5} />
+        <SwordfishModel isLocal={false} player={player} scale={0.5} />
         <ChatBubble message={player.chatBubble} />
       </RigidBody>
     </>

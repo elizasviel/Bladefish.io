@@ -136,6 +136,10 @@ function handleAction(payload: any) {
   if (player) {
     player.currentAction = payload.action;
     publishState();
+    setTimeout(() => {
+      player.currentAction = "";
+      publishState();
+    }, 3000);
   }
 }
 

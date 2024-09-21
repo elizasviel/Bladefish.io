@@ -95,7 +95,7 @@ export const LocalPlayer: React.FC<{
       />
 
       <RigidBody ref={playerRef} lockRotations={true} colliders="ball">
-        <SwordfishModel isLocal={true} scale={0.5} />
+        <SwordfishModel isLocal={true} player={player} scale={0.5} />
         <ChatBubble message={player.chatBubble} />
       </RigidBody>
     </>

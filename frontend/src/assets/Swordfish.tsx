@@ -22,6 +22,15 @@ interface GLTFAction extends THREE.AnimationClip {
   name: ActionName;
 }
 
+interface Player {
+  id: string;
+  position: { x: number; y: number; z: number };
+  velocity: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number; w: number };
+  currentAction: string;
+  chatBubble: string;
+}
+
 type GLTFResult = GLTF & {
   nodes: {
     Swordfish_1: THREE.SkinnedMesh;
@@ -40,9 +49,9 @@ type GLTFResult = GLTF & {
 };
 
 export function Model({
-  isLocal,
+  player,
   ...props
-}: { isLocal: boolean } & JSX.IntrinsicElements["group"]) {
+}: { isLocal: boolean; player: Player } & JSX.IntrinsicElements["group"]) {
   const group = React.useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF("/Swordfish-transformed.glb");
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -50,18 +59,12 @@ export function Model({
   const { actions } = useAnimations(animations, group);
 
   useEffect(() => {
-    if (isLocal) {
-      window.addEventListener("click", () => {
-        actions["Fish_Armature|Attack"]?.setLoop(THREE.LoopOnce, 1);
-        actions["Fish_Armature|Attack"]?.play();
-        actions["Fish_Armature|Attack"]?.reset();
-      });
-
-      setTimeout(() => {
-        actions["Fish_Armature|Attack"]?.reset();
-      }, 1000);
+    if (player.currentAction === "attack") {
+      actions["Fish_Armature|Attack"]?.setLoop(THREE.LoopOnce, 1);
+      actions["Fish_Armature|Attack"]?.play();
+      actions["Fish_Armature|Attack"]?.reset();
     }
-  }, []);
+  }, [player.currentAction]);
 
   return (
     <group ref={group} {...props} dispose={null}>
