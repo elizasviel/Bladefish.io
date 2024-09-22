@@ -277,6 +277,20 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
+
+          /*
+          console.log("ROTATION", rotation);
+          console.log(rotation.x, rotation.y, rotation.z, rotation.w);
+
+          player.setRotation(
+            {
+              x: 0.1,
+              y: 0.1,
+              z: 0.1,
+              w: 1,
+            },
+          );
+          */
           playerObject.velocity = player.linvel();
           playerObject.position = player.translation();
           playerObject.rotation = player.rotation();
