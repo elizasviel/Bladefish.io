@@ -39,6 +39,16 @@ interface Player {
   ws: WebSocket;
 }
 
+interface Enemy {
+  id: string;
+  position: Position;
+  rotation: Rotation;
+  velocity: Velocity;
+  //hitbox: Hitbox;
+  health: number;
+  currentAction: string;
+}
+
 // Create a WebSocket server on port 8080
 const wss = new WebSocket.Server({ port: 8080 });
 // Initialize an array to store connected players

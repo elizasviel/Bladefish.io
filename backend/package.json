@@ -4,13 +4,16 @@
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/seedrandom": "^3.0.8",
+    "@types/three": "^0.168.0",
     "@types/uuid": "^10.0.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@types/three": "^0.168.0",
+    "@dimforge/rapier3d": "^0.14.0",
+    "@dimforge/rapier3d-compat": "^0.14.0",
     "three": "^0.168.0",
     "uuid": "^10.0.0",
     "ws": "^8.18.0"
