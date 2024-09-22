@@ -15,17 +15,15 @@ export const Terrain = () => {
         <circleGeometry args={[7, 20]}></circleGeometry>
         <MeshPortalMaterial />
       </mesh>
-      <RigidBody colliders="trimesh" type="fixed" position={[0, 20, 0]}>
-        <mesh>
-          <boxGeometry args={[100, 50, 100]}></boxGeometry>
-          <meshStandardMaterial
-            color="#b69f66"
-            transparent={true}
-            opacity={0.3}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </RigidBody>
+      <mesh position={[0, 20, 0]}>
+        <boxGeometry args={[100, 50, 100]}></boxGeometry>
+        <meshStandardMaterial
+          color="#b69f66"
+          transparent={true}
+          opacity={0.3}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
     </>
   );
 };

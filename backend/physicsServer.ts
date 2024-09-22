@@ -56,14 +56,41 @@ let players: Player[] = [];
 // Initialize a chat log to store chat messages
 let chatLog: ChatMessage[] = [];
 //Initialize the physics world, 0 gravity
-let world = new RAPIER.World({ x: 0.0, y: 0.0, z: 0.0 });
+let world: RAPIER.World;
 //Define the game loop
-const gameLoop = () => {
+let lastState: string = "";
+
+function stateChanged(): boolean {
+  const currentState = JSON.stringify(
+    players.map((p) => ({
+      id: p.id,
+      position: p.position,
+      rotation: p.rotation,
+      velocity: p.velocity,
+      chatBubble: p.chatBubble,
+      currentAction: p.currentAction,
+    }))
+  );
+
+  if (currentState !== lastState) {
+    lastState = currentState;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+const gameLoop = (world: RAPIER.World) => {
   // Step the simulation forward.
   world.step();
-  publishState();
-  setTimeout(gameLoop, 16);
+
+  if (stateChanged()) {
+    publishState();
+  }
+
+  setTimeout(() => gameLoop(world), 16);
 };
+
 // Function to broadcast the current state to all connected clients
 function publishState() {
   const state = { type: "state", payload: players };
@@ -102,10 +129,13 @@ function initializePlayer(ws: WebSocket) {
         w: 0,
       })
       .setLinvel(0, 0, 0);
+    // Create a collider for the rigidbody
     const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5);
+    // Add the rigidbody and collider to the physics world
     const rigidBody = world.createRigidBody(rigidBodyDesc);
     const collider = world.createCollider(colliderDesc, rigidBody);
 
+    // Create a new player object
     const newPlayer: Player = {
       id: rigidBody.handle,
       position: rigidBody.translation(),
@@ -180,22 +210,42 @@ function handleAction(payload: any) {
 // Function to handle player movement
 // TODO: On movement, update the player's rigidbody depending on the player's inputs.
 function handlePlayerMovement(payload: any) {
-  // Find the player by ID
-  const player = world.getRigidBody(payload.id);
+  // Find the player's rigidbody by ID
+  const playerRigidBody = world.getRigidBody(payload.id);
+  // Find the player object by ID
+  const player = players.find((p) => p.id === payload.id);
   // If the player is found, update their position, velocity, and rotation
   if (player) {
     switch (payload.action) {
-      case "moveForward":
-        player.setLinvel({ x: 0, y: 0, z: 10 }, true);
+      case "w":
+        playerRigidBody.setLinvel({ x: 0, y: 0, z: 1 }, true);
+        player.velocity = playerRigidBody.linvel();
+        player.position = playerRigidBody.translation();
+        player.rotation = playerRigidBody.rotation();
         break;
-      case "moveBackward":
-        player.setLinvel({ x: 0, y: 0, z: -10 }, true);
+      case "s":
+        playerRigidBody.setLinvel({ x: 0, y: 0, z: -1 }, true);
+        player.velocity = playerRigidBody.linvel();
+        player.position = playerRigidBody.translation();
+        player.rotation = playerRigidBody.rotation();
         break;
-      case "moveLeft":
-        player.setLinvel({ x: -10, y: 0, z: 0 }, true);
+      case "a":
+        playerRigidBody.setLinvel({ x: -1, y: 0, z: 0 }, true);
+        player.velocity = playerRigidBody.linvel();
+        player.position = playerRigidBody.translation();
+        player.rotation = playerRigidBody.rotation();
         break;
-      case "moveRight":
-        player.setLinvel({ x: 10, y: 0, z: 0 }, true);
+      case "d":
+        playerRigidBody.setLinvel({ x: 1, y: 0, z: 0 }, true);
+        player.velocity = playerRigidBody.linvel();
+        player.position = playerRigidBody.translation();
+        player.rotation = playerRigidBody.rotation();
+        break;
+      case "stop":
+        playerRigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        player.velocity = playerRigidBody.linvel();
+        player.position = playerRigidBody.translation();
+        player.rotation = playerRigidBody.rotation();
         break;
     }
 
@@ -205,11 +255,19 @@ function handlePlayerMovement(payload: any) {
     // Log the player's movement
     console.log(
       "Player moved:",
-      player.handle,
-      "New position:",
-      player.translation(),
-      "New rotation:",
-      player.rotation()
+      player.id,
+      "Physics position:",
+      playerRigidBody.translation(),
+      "Player position:",
+      player.position,
+      "Physics rotation:",
+      playerRigidBody.rotation(),
+      "Player rotation:",
+      player.rotation,
+      "Physics velocity:",
+      playerRigidBody.linvel(),
+      "Player velocity:",
+      player.velocity
     );
   } else {
     console.log("Player not found:", payload.id);
@@ -258,6 +316,12 @@ wss.on("connection", (ws: WebSocket) => {
 console.log("WEBSOCKET SERVER IS RUNNING ON ws://localhost:8080");
 
 // Initialize RAPIER and begin the game loop
-RAPIER.init().then(gameLoop);
+RAPIER.init().then(() => {
+  // Create the world after RAPIER has been initialized
+  world = new RAPIER.World({ x: 0.0, y: 0.0, z: 0.0 });
 
-//how to identify a player's rigidbody?
+  // Start the game loop with the initialized world
+  gameLoop(world);
+});
+
+//TODO: Shape the colliders to be more accurate to the player's hitbox.

@@ -104,13 +104,11 @@ const App: React.FC = () => {
               backgroundColor: "skyblue",
             }}
           >
-            <Physics interpolate={true} gravity={[0, 0, 0]}>
-              <Scene
-                socket={socket.current}
-                playerId={id.current}
-                players={players}
-              />
-            </Physics>
+            <Scene
+              socket={socket.current}
+              playerId={id.current}
+              players={players}
+            />
           </Canvas>
           <ChatBox
             socket={socket.current}

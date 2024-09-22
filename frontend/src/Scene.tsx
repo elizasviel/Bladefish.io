@@ -34,7 +34,6 @@ export const Scene: React.FC<{
   players: Player[];
 }> = ({ socket, playerId, players }) => {
   console.log("RENDERING SCENE");
-  const playerRef = useRef<RapierRigidBody>(null);
   const { camera } = useThree();
   const [hovered, setHovered] = useState<string>(""); //onMouseEnter and onMouseLeave
   const [keyboardSettings, setKeyboardSettings] = useState<string>("");
@@ -53,29 +52,14 @@ export const Scene: React.FC<{
   };
 
   //Sends a movement from the player to the server
-  const sendMovement = (
-    movement: THREE.Vector3,
-    position: THREE.Vector3,
-    rotation: THREE.Quaternion
-  ) => {
-    console.log("SENDING PLAYER MOVEMENT", movement, position, rotation);
+  const sendMovement = (input: string) => {
+    console.log("SENDING PLAYER MOVEMENT", input);
     socket.send(
       JSON.stringify({
         type: "playerMovement",
         payload: {
           id: playerId,
-          velocity: { x: movement.x, y: movement.y, z: movement.z },
-          position: {
-            x: position?.x,
-            y: position?.y,
-            z: position?.z,
-          },
-          rotation: {
-            x: rotation.x,
-            y: rotation.y,
-            z: rotation.z,
-            w: rotation.w,
-          },
+          action: input,
         },
       })
     );
@@ -99,70 +83,7 @@ export const Scene: React.FC<{
     console.log("KEY DOWN", event);
     switch (keyboardSettings) {
       default:
-        const quaternion = new THREE.Quaternion();
-        camera.getWorldQuaternion(quaternion);
-
-        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion);
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
-        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
-
-        //converts Rapier Vector3 to THREE.Vector3
-        const position = playerRef.current?.translation() as THREE.Vector3;
-        let movement = new THREE.Vector3();
-        let rotation = new THREE.Quaternion();
-
-        switch (event.key) {
-          case "w":
-            movement.add(forward);
-            rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-            rotation.setFromRotationMatrix(
-              new THREE.Matrix4().lookAt(
-                new THREE.Vector3(0, 0, 0),
-                forward.negate(),
-                up
-              )
-            );
-            movement.normalize().multiplyScalar(10);
-            sendMovement(movement, position, rotation);
-            break;
-          case "s":
-            movement.sub(forward);
-            rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-            rotation.setFromRotationMatrix(
-              new THREE.Matrix4().lookAt(
-                new THREE.Vector3(0, 0, 0),
-                forward,
-                up
-              )
-            );
-            movement.normalize().multiplyScalar(10);
-            sendMovement(movement, position, rotation);
-            break;
-          case "a":
-            movement.sub(right);
-            rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-            rotation.setFromRotationMatrix(
-              new THREE.Matrix4().lookAt(new THREE.Vector3(0, 0, 0), right, up)
-            );
-            movement.normalize().multiplyScalar(10);
-            sendMovement(movement, position, rotation);
-            break;
-          case "d":
-            movement.add(right);
-            rotation.setFromUnitVectors(new THREE.Vector3(0, 0, 1), movement);
-            rotation.setFromRotationMatrix(
-              new THREE.Matrix4().lookAt(
-                new THREE.Vector3(0, 0, 0),
-                right.negate(),
-                up
-              )
-            );
-            movement.normalize().multiplyScalar(10);
-            sendMovement(movement, position, rotation);
-            break;
-          default:
-            return;
-        }
+        sendMovement(event.key);
         break;
     }
   };
@@ -171,9 +92,7 @@ export const Scene: React.FC<{
     console.log("KEY UP", event);
     switch (keyboardSettings) {
       default:
-        const position = playerRef.current?.translation() as THREE.Vector3;
-        const rotation = playerRef.current?.rotation() as THREE.Quaternion;
-        sendMovement(new THREE.Vector3(0, 0, 0), position, rotation);
+        sendMovement("stop");
         break;
     }
   };
@@ -197,10 +116,7 @@ export const Scene: React.FC<{
     <>
       <ambientLight intensity={1.5} />
       <pointLight position={[10, 10, 10]} />
-      <LocalPlayer
-        player={players.find((player) => player.id === playerId)}
-        playerRef={playerRef}
-      />
+      <LocalPlayer player={players.find((player) => player.id === playerId)} />
       {players
         .filter((player) => player.id !== playerId)
         .map((player) => (
