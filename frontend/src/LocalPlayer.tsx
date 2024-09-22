@@ -34,6 +34,7 @@ export const LocalPlayer: React.FC<{
 }> = ({ player }) => {
   console.log("RENDERING LOCAL PLAYER", player);
   const controlsRef = useRef<OrbitControlsImpl>(null);
+
   if (!player) {
     return null;
   }
@@ -49,6 +50,12 @@ export const LocalPlayer: React.FC<{
     player.rotation.y,
     player.rotation.z,
     player.rotation.w
+  );
+
+  controlsRef.current?.target.set(
+    player.position.x,
+    player.position.y,
+    player.position.z
   );
 
   return (

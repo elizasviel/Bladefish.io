@@ -54,12 +54,16 @@ export const Scene: React.FC<{
   //Sends a movement from the player to the server
   const sendMovement = (input: string) => {
     console.log("SENDING PLAYER MOVEMENT", input);
+    const quaternion = new THREE.Quaternion();
+    camera.getWorldQuaternion(quaternion);
+
     socket.send(
       JSON.stringify({
         type: "playerMovement",
         payload: {
           id: playerId,
           action: input,
+          cameraRotation: quaternion,
         },
       })
     );
