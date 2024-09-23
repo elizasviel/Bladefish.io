@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { RapierRigidBody } from "@react-three/rapier";
 import { Player } from "./Player.tsx";
 import { LocalPlayer } from "./LocalPlayer.tsx";
 import { Terrain } from "./Terrain.tsx";

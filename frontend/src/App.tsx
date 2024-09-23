@@ -142,14 +142,12 @@ const App: React.FC = () => {
             }}
           >
             <DebugMesh debugMeshes={debugMeshes} />
-            {/*
             <Scene
               socket={socket.current}
               playerId={id.current}
               players={players}
               enemies={enemies}
             />
-            */}
           </Canvas>
           <ChatBox
             socket={socket.current}

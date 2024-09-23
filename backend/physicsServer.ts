@@ -115,7 +115,7 @@ RAPIER.init().then(() => {
         z: 0,
         w: 1,
       });
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5)
+    const colliderDesc = RAPIER.ColliderDesc.capsule(3, 1)
       .setSensor(true)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     const rigidBody = world.createRigidBody(rigidBodyDesc);
