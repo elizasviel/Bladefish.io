@@ -126,7 +126,7 @@ RAPIER.init().then(() => {
       position: rigidBody.translation(),
       rotation: rigidBody.rotation(),
       velocity: rigidBody.linvel(),
-      health: 100,
+      health: 30,
       currentAction: "",
     });
 
@@ -228,6 +228,7 @@ RAPIER.init().then(() => {
         console.log("CLIENT NOT FOUND");
       }
     });
+    /*
     console.log(
       "STATE PUBLISHED: ",
       players.map((p) => [
@@ -247,6 +248,7 @@ RAPIER.init().then(() => {
         e.currentAction,
       ])
     );
+    */
   }
 
   function publishChatLog() {
@@ -432,6 +434,7 @@ RAPIER.init().then(() => {
     world.step(eventQueue);
 
     eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+      console.log("COLLISION EVENT: ", handle1, handle2, started);
       const player = players.find((p) => p.id === handle1);
       const enemy = enemies.find((e) => e.id === handle2);
       if (player && enemy && started) {
@@ -459,6 +462,18 @@ RAPIER.init().then(() => {
         enemy.position = rigidBody.translation();
         enemy.rotation = rigidBody.rotation();
         enemy.velocity = rigidBody.linvel();
+      }
+    });
+
+    // Send the debug meshes to the client
+    const { vertices, colors } = world.debugRender();
+    const debugMeshes = {
+      type: "debugMeshes",
+      payload: { vertices, colors },
+    };
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(debugMeshes));
       }
     });
 

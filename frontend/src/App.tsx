@@ -5,6 +5,7 @@ import { Scene } from "./Scene";
 import { Loading } from "./Loading";
 import { ChatBox } from "./ChatBox";
 import { useState, useRef, useEffect } from "react";
+import { DebugMesh } from "./DebugMesh";
 
 interface Player {
   id: number;
@@ -69,6 +70,10 @@ const App: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
+  const [debugMeshes, setDebugMeshes] = useState<{
+    vertices: Float32Array;
+    colors: Float32Array;
+  }>({ vertices: new Float32Array(), colors: new Float32Array() });
   const socket = useRef<WebSocket>();
   const id = useRef<number>(0);
 
@@ -99,6 +104,14 @@ const App: React.FC = () => {
           console.log("RECEIVED CHAT LOG", data.payload);
           setChatLog(data.payload);
           break;
+        case "debugMeshes":
+          console.log("RECEIVED DEBUG MESHES", data.payload);
+          const vertices = new Float32Array(
+            Object.values(data.payload.vertices)
+          );
+          const colors = new Float32Array(Object.values(data.payload.colors));
+          setDebugMeshes({ vertices, colors });
+          break;
         default:
           console.log("RECEIVED UNKNOWN MESSAGE TYPE", data.type);
       }
@@ -128,12 +141,15 @@ const App: React.FC = () => {
               backgroundColor: "skyblue",
             }}
           >
+            <DebugMesh debugMeshes={debugMeshes} />
+            {/*
             <Scene
               socket={socket.current}
               playerId={id.current}
               players={players}
               enemies={enemies}
             />
+            */}
           </Canvas>
           <ChatBox
             socket={socket.current}
