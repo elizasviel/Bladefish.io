@@ -112,7 +112,7 @@ RAPIER.init().then(() => {
       return false;
     } else {
       // Create a rigidbody for the player
-      const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
+      const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(0, 0, 0)
         .setRotation({
           x: 0,
@@ -393,6 +393,16 @@ RAPIER.init().then(() => {
   // Define the game loop
   const gameLoop = () => {
     world.step();
+
+    players.forEach((player) => {
+      const rigidBody = world.getRigidBody(player.id);
+      if (rigidBody) {
+        player.position = rigidBody.translation();
+        player.rotation = rigidBody.rotation();
+        player.velocity = rigidBody.linvel();
+      }
+    });
+
     if (stateChanged()) {
       publishState();
     }
