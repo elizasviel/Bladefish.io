@@ -112,13 +112,13 @@ RAPIER.init().then(() => {
       return false;
     } else {
       // Create a rigidbody for the player
-      const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
         .setTranslation(0, 0, 0)
         .setRotation({
           x: 0,
           y: 0,
           z: 0,
-          w: 0,
+          w: 1,
         })
         .setLinvel(0, 0, 0);
       const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5);
@@ -138,9 +138,9 @@ RAPIER.init().then(() => {
       players.push(newPlayer);
       // Send the player's ID to the client
       ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
-      // Broadcast the current state and chat log to all connected clients
-      publishState();
+
       publishChatLog();
+      publishState();
 
       console.log(
         "NEW PLAYER CONNECTED. CURRENT PLAYERS: ",
@@ -182,10 +182,12 @@ RAPIER.init().then(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(state));
+      } else {
+        console.log("CLIENT NOT FOUND");
       }
     });
     console.log(
-      "STATE PUBLISHED",
+      "STATE PUBLISHED: ",
       players.map((p) => [
         p.id,
         p.position,
@@ -202,9 +204,11 @@ RAPIER.init().then(() => {
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(chatLogMessage));
+      } else {
+        console.log("CLIENT NOT FOUND");
       }
     });
-    console.log("Chat log published, ", chatLog);
+    console.log("CHAT LOG PUBLISHED: ", chatLog);
   }
 
   function handleChatMessage(payload: any) {
@@ -220,7 +224,8 @@ RAPIER.init().then(() => {
     const player = players.find((p) => p.id === payload.playerId);
     if (player) {
       player.chatBubble = payload.message;
-      publishState();
+    } else {
+      console.log("PLAYER NOT FOUND");
     }
   }
 
@@ -228,11 +233,11 @@ RAPIER.init().then(() => {
     const player = players.find((p) => p.id === payload.playerId);
     if (player) {
       player.currentAction = payload.action;
-      publishState();
       setTimeout(() => {
         player.currentAction = "";
-        publishState();
-      }, 3000);
+      }, 1500);
+    } else {
+      console.log("PLAYER NOT FOUND");
     }
   }
 
@@ -378,19 +383,6 @@ RAPIER.init().then(() => {
           playerObject.rotation = player.rotation();
           break;
       }
-
-      // Broadcast the current state to all connected clients
-      publishState();
-
-      // Log the player's movement
-      console.log(
-        "Player moved:",
-        player.handle,
-        "New position:",
-        player.translation(),
-        "New rotation:",
-        player.rotation()
-      );
     } else {
       console.log("Player not found:", payload.id);
     }

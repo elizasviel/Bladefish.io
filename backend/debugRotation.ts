@@ -363,14 +363,6 @@ RAPIER.init().then(() => {
 
   // Define the game loop function
   function gameLoop() {
-    // Apply pending updates
-    world.bodies.forEach((body) => {
-      if (body.userData && body.userData.pendingRotation) {
-        body.setRotation(body.userData.pendingRotation, true);
-        delete body.userData.pendingRotation;
-      }
-    });
-
     // Step the world
     world.step();
 
