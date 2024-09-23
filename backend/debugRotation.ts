@@ -2,7 +2,6 @@
 import WebSocket from "ws";
 import RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
-import { any } from "three/webgpu";
 
 interface ChatMessage {
   playerId: number;
@@ -77,10 +76,10 @@ RAPIER.init().then(() => {
             handlePlayerMovement(data.payload);
             break;
           case "chatMessage":
-            //handleChatMessage(data.payload);
+            handleChatMessage(data.payload);
             break;
           case "action":
-            //handleAction(data.payload);
+            handleAction(data.payload);
             break;
         }
       });
@@ -263,15 +262,10 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          // Store the rotation update instead of applying it immediately
-          player.userData = {
-            pendingRotation: {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-          };
+          player.setRotation(
+            { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+            true
+          );
 
           playerObject.velocity = player.linvel();
           playerObject.position = player.translation();
@@ -289,15 +283,10 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          // Store the rotation update instead of applying it immediately
-          player.userData = {
-            pendingRotation: {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-          };
+          player.setRotation(
+            { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+            true
+          );
           playerObject.velocity = player.linvel();
           playerObject.position = player.translation();
           playerObject.rotation = player.rotation();
@@ -315,15 +304,10 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          // Store the rotation update instead of applying it immediately
-          player.userData = {
-            pendingRotation: {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-          };
+          player.setRotation(
+            { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+            true
+          );
           playerObject.velocity = player.linvel();
           playerObject.position = player.translation();
           playerObject.rotation = player.rotation();
@@ -344,15 +328,10 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          // Store the rotation update instead of applying it immediately
-          player.userData = {
-            pendingRotation: {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-          };
+          player.setRotation(
+            { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+            true
+          );
           playerObject.velocity = player.linvel();
           playerObject.position = player.translation();
           playerObject.rotation = player.rotation();
@@ -380,8 +359,6 @@ RAPIER.init().then(() => {
     } else {
       console.log("Player not found:", payload.id);
     }
-
-    console.log("PENDING ROTATION", player.userData.pendingRotation);
   }
 
   // Define the game loop function
@@ -408,7 +385,9 @@ RAPIER.init().then(() => {
       };
     });
 
-    publishState();
+    if (stateChanged()) {
+      publishState();
+    }
   }
 
   // Start the game loop
