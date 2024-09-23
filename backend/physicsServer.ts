@@ -277,20 +277,16 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-
-          /*
-          console.log("ROTATION", rotation);
-          console.log(rotation.x, rotation.y, rotation.z, rotation.w);
-
           player.setRotation(
             {
-              x: 0.1,
-              y: 0.1,
-              z: 0.1,
-              w: 1,
+              x: rotation.x,
+              y: rotation.y,
+              z: rotation.z,
+              w: rotation.w,
             },
+            true
           );
-          */
+
           playerObject.velocity = player.linvel();
           playerObject.position = player.translation();
           playerObject.rotation = player.rotation();
@@ -305,6 +301,15 @@ RAPIER.init().then(() => {
 
           player.setLinvel(
             { x: movement.x, y: movement.y, z: movement.z },
+            true
+          );
+          player.setRotation(
+            {
+              x: rotation.x,
+              y: rotation.y,
+              z: rotation.z,
+              w: rotation.w,
+            },
             true
           );
           playerObject.velocity = player.linvel();
@@ -322,6 +327,15 @@ RAPIER.init().then(() => {
 
           player.setLinvel(
             { x: movement.x, y: movement.y, z: movement.z },
+            true
+          );
+          player.setRotation(
+            {
+              x: rotation.x,
+              y: rotation.y,
+              z: rotation.z,
+              w: rotation.w,
+            },
             true
           );
           playerObject.velocity = player.linvel();
@@ -342,6 +356,15 @@ RAPIER.init().then(() => {
 
           player.setLinvel(
             { x: movement.x, y: movement.y, z: movement.z },
+            true
+          );
+          player.setRotation(
+            {
+              x: rotation.x,
+              y: rotation.y,
+              z: rotation.z,
+              w: rotation.w,
+            },
             true
           );
           playerObject.velocity = player.linvel();
