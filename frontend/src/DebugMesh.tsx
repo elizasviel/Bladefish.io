@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { LineSegments, BufferAttribute } from "three";
+import { BufferAttribute } from "three";
 import * as THREE from "three";
 
 interface DebugMeshProps {

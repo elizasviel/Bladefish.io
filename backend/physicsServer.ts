@@ -115,7 +115,7 @@ RAPIER.init().then(() => {
         z: 0,
         w: 1,
       });
-    const colliderDesc = RAPIER.ColliderDesc.capsule(3, 1)
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5)
       .setSensor(true)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     const rigidBody = world.createRigidBody(rigidBodyDesc);
@@ -442,6 +442,7 @@ RAPIER.init().then(() => {
         enemy.health -= 10;
         console.log("Enemy health:", enemy.health);
         if (enemy.health <= 0) {
+          world.removeRigidBody(world.getRigidBody(enemy.id));
           enemies = enemies.filter((e) => e.id !== enemy.id);
         }
       }
