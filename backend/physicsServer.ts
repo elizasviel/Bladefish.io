@@ -53,6 +53,8 @@ interface Enemy {
 RAPIER.init().then(() => {
   // Create the physics world after RAPIER is initialized
   const world = new RAPIER.World({ x: 0.0, y: 0.0, z: 0.0 });
+  // Create a queue for handling collision events
+  const eventQueue = new RAPIER.EventQueue(true);
   // Create a WebSocket server on port 8080
   const wss = new WebSocket.Server({ port: 8080 });
   // Initialize an array to store connected players
@@ -113,9 +115,12 @@ RAPIER.init().then(() => {
         z: 0,
         w: 1,
       });
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5).setSensor(true);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5)
+      .setSensor(true)
+      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     const rigidBody = world.createRigidBody(rigidBodyDesc);
     const collider = world.createCollider(colliderDesc, rigidBody);
+
     enemies.push({
       id: rigidBody.handle,
       position: rigidBody.translation(),
@@ -424,7 +429,17 @@ RAPIER.init().then(() => {
 
   // Define the game loop
   const gameLoop = () => {
-    world.step();
+    world.step(eventQueue);
+
+    eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+      console.log("Collision event:", handle1, handle2, started);
+    });
+
+    eventQueue.drainContactForceEvents((event) => {
+      let handle1 = event.collider1(); // Handle of the first collider involved in the event.
+      let handle2 = event.collider2(); // Handle of the second collider involved in the event.
+      /* Handle the contact force event. */
+    });
 
     players.forEach((player) => {
       const rigidBody = world.getRigidBody(player.id);
