@@ -1,14 +1,12 @@
-import { RapierRigidBody, RigidBody } from "@react-three/rapier";
 import { useRef } from "react";
 import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Model as SwordfishModel } from "./assets/Swordfish.tsx";
 import { ChatBubble } from "./ChatBubble";
 import { OrbitControls } from "@react-three/drei";
 
 interface Player {
-  id: string;
+  id: number;
   position: {
     x: number;
     y: number;

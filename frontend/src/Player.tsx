@@ -6,7 +6,7 @@ import { Model as SwordfishModel } from "./assets/Swordfish.tsx";
 import { ChatBubble } from "./ChatBubble.tsx";
 
 interface Player {
-  id: string;
+  id: number;
   position: {
     x: number;
     y: number;

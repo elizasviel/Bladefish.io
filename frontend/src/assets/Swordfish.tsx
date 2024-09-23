@@ -23,7 +23,7 @@ interface GLTFAction extends THREE.AnimationClip {
 }
 
 interface Player {
-  id: string;
+  id: number;
   position: { x: number; y: number; z: number };
   velocity: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number; w: number };

@@ -5,9 +5,9 @@ import { RapierRigidBody } from "@react-three/rapier";
 import { Player } from "./Player.tsx";
 import { LocalPlayer } from "./LocalPlayer.tsx";
 import { Terrain } from "./Terrain.tsx";
-
+import { Enemy } from "./Enemy.tsx";
 interface Player {
-  id: string;
+  id: number;
   position: {
     x: number;
     y: number;
@@ -28,11 +28,34 @@ interface Player {
   chatBubble: string;
 }
 
+interface Enemy {
+  id: number;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  health: number;
+  currentAction: string;
+}
+
 export const Scene: React.FC<{
   socket: WebSocket;
-  playerId: string;
+  playerId: number;
   players: Player[];
-}> = ({ socket, playerId, players }) => {
+  enemies: Enemy[];
+}> = ({ socket, playerId, players, enemies }) => {
   console.log("RENDERING SCENE");
   const { camera } = useThree();
   const [hovered, setHovered] = useState<string>(""); //onMouseEnter and onMouseLeave
@@ -126,6 +149,9 @@ export const Scene: React.FC<{
         .map((player) => (
           <Player key={player.id} player={player} />
         ))}
+      {enemies.map((enemy) => (
+        <Enemy key={enemy.id} enemy={enemy} />
+      ))}
       <Terrain />
     </>
   );

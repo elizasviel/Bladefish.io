@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 
 interface ChatMessage {
-  playerId: string;
+  playerId: number;
   message: string;
   timestamp: number;
 }
 
 interface ChatBoxProps {
   socket: WebSocket;
-  playerId: string;
+  playerId: number;
   chatLog: ChatMessage[];
 }
 

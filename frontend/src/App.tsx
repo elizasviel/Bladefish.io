@@ -7,7 +7,7 @@ import { ChatBox } from "./ChatBox";
 import { useState, useRef, useEffect } from "react";
 
 interface Player {
-  id: string;
+  id: number;
   position: {
     x: number;
     y: number;
@@ -28,8 +28,30 @@ interface Player {
   chatBubble: string;
 }
 
+interface Enemy {
+  id: number;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  health: number;
+  currentAction: string;
+}
+
 interface ChatMessage {
-  playerId: string;
+  playerId: number;
   message: string;
   timestamp: number;
 }
@@ -45,9 +67,10 @@ const keyboardMap = [
 const App: React.FC = () => {
   console.log("RENDERING APP");
   const [players, setPlayers] = useState<Player[]>([]);
+  const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
   const socket = useRef<WebSocket>();
-  const id = useRef<string>("");
+  const id = useRef<number>(0);
 
   useEffect(() => {
     socket.current = new WebSocket("ws://localhost:8080");
@@ -62,7 +85,8 @@ const App: React.FC = () => {
       switch (data.type) {
         case "state":
           console.log("UPDATING PLAYERS STATE", data.payload);
-          setPlayers(data.payload);
+          setPlayers(data.payload.players);
+          setEnemies(data.payload.enemies);
           break;
         case "id":
           console.log("RECEIVED PLAYER ID", data.payload);
@@ -108,6 +132,7 @@ const App: React.FC = () => {
               socket={socket.current}
               playerId={id.current}
               players={players}
+              enemies={enemies}
             />
           </Canvas>
           <ChatBox

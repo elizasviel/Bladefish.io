@@ -45,7 +45,6 @@ interface Enemy {
   position: Position;
   rotation: Rotation;
   velocity: Velocity;
-  //hitbox: Hitbox;
   health: number;
   currentAction: string;
 }
@@ -58,6 +57,8 @@ RAPIER.init().then(() => {
   const wss = new WebSocket.Server({ port: 8080 });
   // Initialize an array to store connected players
   let players: Player[] = [];
+  // Initialize an array to store enemies
+  let enemies: Enemy[] = [];
   // Initialize a chat log to store chat messages
   let chatLog: ChatMessage[] = [];
   // Initialize a variable to store the last state of the game
@@ -103,6 +104,30 @@ RAPIER.init().then(() => {
     console.log("WEBSOCKET SERVER IS RUNNING ON ws://localhost:8080");
   });
 
+  function spawnEnemy() {
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
+      .setTranslation(0, 10, 0)
+      .setRotation({
+        x: 0,
+        y: 0,
+        z: 0,
+        w: 1,
+      });
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5).setSensor(true);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
+    const collider = world.createCollider(colliderDesc, rigidBody);
+    enemies.push({
+      id: rigidBody.handle,
+      position: rigidBody.translation(),
+      rotation: rigidBody.rotation(),
+      velocity: rigidBody.linvel(),
+      health: 100,
+      currentAction: "",
+    });
+
+    console.log("ENEMY SPAWNED");
+  }
+
   function initializePlayer(ws: WebSocket) {
     if (players.length >= 10) {
       ws.send(
@@ -121,7 +146,7 @@ RAPIER.init().then(() => {
           w: 1,
         })
         .setLinvel(0, 0, 0);
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5);
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
       const rigidBody = world.createRigidBody(rigidBodyDesc);
       const collider = world.createCollider(colliderDesc, rigidBody);
 
@@ -142,7 +167,6 @@ RAPIER.init().then(() => {
       ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
 
       publishChatLog();
-      publishState();
 
       console.log(
         "NEW PLAYER CONNECTED. CURRENT PLAYERS: ",
@@ -160,16 +184,24 @@ RAPIER.init().then(() => {
   }
 
   function stateChanged(): boolean {
-    const currentState = JSON.stringify(
-      players.map((p) => ({
+    const currentState = JSON.stringify({
+      players: players.map((p) => ({
         id: p.id,
         position: p.position,
         rotation: p.rotation,
         velocity: p.velocity,
         chatBubble: p.chatBubble,
         currentAction: p.currentAction,
-      }))
-    );
+      })),
+      enemies: enemies.map((e) => ({
+        id: e.id,
+        position: e.position,
+        rotation: e.rotation,
+        velocity: e.velocity,
+        health: e.health,
+        currentAction: e.currentAction,
+      })),
+    });
 
     if (currentState !== lastState) {
       lastState = currentState;
@@ -180,7 +212,10 @@ RAPIER.init().then(() => {
   }
 
   function publishState() {
-    const state = { type: "state", payload: players };
+    const state = {
+      type: "state",
+      payload: { players: players, enemies: enemies },
+    };
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(state));
@@ -197,6 +232,14 @@ RAPIER.init().then(() => {
         p.velocity,
         p.chatBubble,
         p.currentAction,
+      ]),
+      enemies.map((e) => [
+        e.id,
+        e.position,
+        e.rotation,
+        e.velocity,
+        e.health,
+        e.currentAction,
       ])
     );
   }
@@ -294,9 +337,6 @@ RAPIER.init().then(() => {
             true
           );
 
-          playerObject.velocity = player.linvel();
-          playerObject.position = player.translation();
-          playerObject.rotation = player.rotation();
           break;
         case "s":
           movement.sub(forward);
@@ -319,9 +359,7 @@ RAPIER.init().then(() => {
             },
             true
           );
-          playerObject.velocity = player.linvel();
-          playerObject.position = player.translation();
-          playerObject.rotation = player.rotation();
+
           break;
 
         case "a":
@@ -345,9 +383,7 @@ RAPIER.init().then(() => {
             },
             true
           );
-          playerObject.velocity = player.linvel();
-          playerObject.position = player.translation();
-          playerObject.rotation = player.rotation();
+
           break;
         case "d":
           movement.add(right);
@@ -374,15 +410,11 @@ RAPIER.init().then(() => {
             },
             true
           );
-          playerObject.velocity = player.linvel();
-          playerObject.position = player.translation();
-          playerObject.rotation = player.rotation();
+
           break;
         case "stop":
           player.setLinvel({ x: 0, y: 0, z: 0 }, true);
-          playerObject.velocity = player.linvel();
-          playerObject.position = player.translation();
-          playerObject.rotation = player.rotation();
+
           break;
       }
     } else {
@@ -403,6 +435,15 @@ RAPIER.init().then(() => {
       }
     });
 
+    enemies.forEach((enemy) => {
+      const rigidBody = world.getRigidBody(enemy.id);
+      if (rigidBody) {
+        enemy.position = rigidBody.translation();
+        enemy.rotation = rigidBody.rotation();
+        enemy.velocity = rigidBody.linvel();
+      }
+    });
+
     if (stateChanged()) {
       publishState();
     }
@@ -410,4 +451,5 @@ RAPIER.init().then(() => {
   };
   // Start the game loop
   gameLoop();
+  setTimeout(spawnEnemy, 10000);
 });
