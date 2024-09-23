@@ -5,6 +5,7 @@ import { Billboard, Text } from "@react-three/drei";
 export const ChatBubble: React.FC<{ message: string | undefined }> = ({
   message,
 }) => {
+  console.log("RENDERING CHATBUBBLE", message);
   if (!message) return null;
 
   const [bubbleSize, setBubbleSize] = useState({ width: 2.2, height: 1.2 });

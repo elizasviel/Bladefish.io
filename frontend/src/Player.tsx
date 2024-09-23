@@ -48,8 +48,9 @@ export const Player: React.FC<{ player: Player }> = ({ player }) => {
         isLocal={false}
         player={player}
         scale={0.5}
-      />
-      <ChatBubble message={player.chatBubble} />
+      >
+        <ChatBubble message={player.chatBubble} />
+      </SwordfishModel>
     </>
   );
 };

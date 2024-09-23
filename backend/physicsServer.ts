@@ -125,6 +125,8 @@ RAPIER.init().then(() => {
       const rigidBody = world.createRigidBody(rigidBodyDesc);
       const collider = world.createCollider(colliderDesc, rigidBody);
 
+      console.log(rigidBody.handle);
+
       const newPlayer: Player = {
         id: rigidBody.handle,
         position: rigidBody.translation(),
@@ -218,7 +220,6 @@ RAPIER.init().then(() => {
       message: payload.message,
       timestamp: Date.now(),
     });
-    publishChatLog();
 
     // Also, update the player's chat bubble to display the message
     const player = players.find((p) => p.id === payload.playerId);
@@ -227,6 +228,7 @@ RAPIER.init().then(() => {
     } else {
       console.log("PLAYER NOT FOUND");
     }
+    publishChatLog();
   }
 
   function handleAction(payload: any) {

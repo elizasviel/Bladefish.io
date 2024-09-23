@@ -74,8 +74,9 @@ export const LocalPlayer: React.FC<{
         isLocal={true}
         player={player}
         scale={0.5}
-      />
-      <ChatBubble message={player.chatBubble} />
+      >
+        <ChatBubble message={player.chatBubble} />
+      </SwordfishModel>
     </>
   );
 };
