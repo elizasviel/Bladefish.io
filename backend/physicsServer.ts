@@ -432,13 +432,16 @@ RAPIER.init().then(() => {
     world.step(eventQueue);
 
     eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-      console.log("Collision event:", handle1, handle2, started);
-    });
-
-    eventQueue.drainContactForceEvents((event) => {
-      let handle1 = event.collider1(); // Handle of the first collider involved in the event.
-      let handle2 = event.collider2(); // Handle of the second collider involved in the event.
-      /* Handle the contact force event. */
+      const player = players.find((p) => p.id === handle1);
+      const enemy = enemies.find((e) => e.id === handle2);
+      if (player && enemy && started) {
+        console.log("Player hit enemy");
+        enemy.health -= 10;
+        console.log("Enemy health:", enemy.health);
+        if (enemy.health <= 0) {
+          enemies = enemies.filter((e) => e.id !== enemy.id);
+        }
+      }
     });
 
     players.forEach((player) => {
