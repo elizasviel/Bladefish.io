@@ -40,6 +40,8 @@ export const Player: React.FC<{ player: Player }> = ({ player }) => {
     player.rotation.w
   );
 
+  console.log([player.id, player.chatBubble]);
+
   return (
     <>
       <SwordfishModel
@@ -48,9 +50,8 @@ export const Player: React.FC<{ player: Player }> = ({ player }) => {
         isLocal={false}
         player={player}
         scale={0.5}
-      >
-        <ChatBubble message={player.chatBubble} />
-      </SwordfishModel>
+      ></SwordfishModel>
+      <ChatBubble player={player} />
     </>
   );
 };

@@ -58,6 +58,8 @@ export const LocalPlayer: React.FC<{
     player.position.z
   );
 
+  console.log("RENDERING LOCAL PLAYER", player.chatBubble);
+
   return (
     <>
       <OrbitControls
@@ -68,15 +70,15 @@ export const LocalPlayer: React.FC<{
         minPolarAngle={0.3}
         enablePan={false}
       />
+
       <SwordfishModel
         position={position}
         quaternion={quaternion}
         isLocal={true}
         player={player}
         scale={0.5}
-      >
-        <ChatBubble message={player.chatBubble} />
-      </SwordfishModel>
+      ></SwordfishModel>
+      <ChatBubble player={player} />
     </>
   );
 };

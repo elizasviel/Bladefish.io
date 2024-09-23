@@ -2,17 +2,40 @@ import { useState, useEffect } from "react";
 import * as THREE from "three";
 import { Billboard, Text } from "@react-three/drei";
 
-export const ChatBubble: React.FC<{ message: string | undefined }> = ({
-  message,
-}) => {
-  console.log("RENDERING CHATBUBBLE", message);
-  if (!message) return null;
+interface Player {
+  id: string;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
+  currentAction: string;
+  chatBubble: string;
+}
+
+export const ChatBubble: React.FC<{ player: Player }> = ({ player }) => {
+  console.log("RENDERING CHATBUBBLE", player.chatBubble);
+  //if (!message) return null;
 
   const [bubbleSize, setBubbleSize] = useState({ width: 2.2, height: 1.2 });
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
+    // Reset expired state when a new message arrives
+    setExpired(false);
+
+    const timer = setTimeout(() => {
       setExpired(true);
     }, 5000);
 
@@ -22,17 +45,27 @@ export const ChatBubble: React.FC<{ message: string | undefined }> = ({
     const charsPerLine = 10;
     const linesPerUnit = 2;
 
-    const lines = Math.ceil(message.length / charsPerLine);
-    const width = Math.max(minWidth, message.length * 0.2);
+    const lines = Math.ceil(player.chatBubble.length / charsPerLine);
+    const width = Math.max(minWidth, player.chatBubble.length * 0.2);
     const height = Math.max(minHeight, lines / linesPerUnit);
 
     setBubbleSize({ width, height });
-  }, [message]);
 
-  if (expired) return null;
-  else
+    // Clear the timeout when the component unmounts or when the effect runs again
+    return () => clearTimeout(timer);
+  }, [player.chatBubble]);
+
+  if (expired || !player.chatBubble) {
+    return null;
+  } else {
     return (
-      <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+      <Billboard
+        position={[player.position.x, player.position.y, player.position.z]}
+        follow={true}
+        lockX={false}
+        lockY={false}
+        lockZ={false}
+      >
         <group position={[0, 2, 0]}>
           {/* Front text */}
           <Text
@@ -47,7 +80,7 @@ export const ChatBubble: React.FC<{ message: string | undefined }> = ({
             color="black"
             overflowWrap="break-word"
           >
-            {message}
+            {player.chatBubble}
             <meshStandardMaterial color="black" side={THREE.DoubleSide} />
           </Text>
 
@@ -66,6 +99,7 @@ export const ChatBubble: React.FC<{ message: string | undefined }> = ({
         </group>
       </Billboard>
     );
+  }
 };
 
 const RoundedRectangle: React.FC<{
