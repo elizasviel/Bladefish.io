@@ -15,7 +15,10 @@
     "@dimforge/rapier3d": "^0.14.0",
     "@dimforge/rapier3d-compat": "^0.14.0",
     "express": "^4.21.0",
+    "gltf-pipeline": "^4.1.0",
+    "node-three-gltf": "^1.8.2",
     "three": "^0.168.0",
+    "three-stdlib": "^2.33.0",
     "uuid": "^10.0.0",
     "ws": "^8.18.0"
   },

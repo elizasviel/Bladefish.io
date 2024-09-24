@@ -2,6 +2,7 @@
 import WebSocket from "ws";
 import RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
+import { createCollidersFromGLB } from "./utils";
 
 interface ChatMessage {
   playerId: number;
@@ -143,14 +144,15 @@ RAPIER.init().then(() => {
     } else {
       // Create a rigidbody for the player
       const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(0, 0, 0)
+        .setTranslation(10, 10, 0)
         .setRotation({
           x: 0,
           y: 0,
           z: 0,
           w: 1,
         })
-        .setLinvel(0, 0, 0);
+        .setLinvel(0, 0, 0)
+        .enabledRotations(false, false, false);
       const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
       const rigidBody = world.createRigidBody(rigidBodyDesc);
       const collider = world.createCollider(colliderDesc, rigidBody);
@@ -486,4 +488,5 @@ RAPIER.init().then(() => {
   // Start the game loop
   gameLoop();
   setTimeout(spawnEnemy, 10000);
+  createCollidersFromGLB("./assets/swordfish.glb", world);
 });
