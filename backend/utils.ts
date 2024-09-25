@@ -1,40 +1,35 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import { GLTFLoader } from "node-three-gltf";
-import { BufferGeometry, Mesh, MeshStandardMaterial, Object3D } from "three";
+import { BufferGeometry, Mesh, SkinnedMesh, Object3D, Matrix4 } from "three";
 import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
 
 export function createCollidersFromGLB(glbPath: string, world: RAPIER.World) {
   console.log("Creating colliders from GLB");
   const loader = new GLTFLoader();
   loader.load(glbPath, (gltf) => {
-    //console.log("SCENE", gltf.scene);
-
     const meshes: Mesh[] = [];
 
-    // Traverse the scene to find all meshes
-    gltf.scene.traverse((child) => {
-      if (child instanceof Mesh) {
-        meshes.push(child);
-
-        /*
-        console.log(
-          "POTENTIALVERTEX",
-          child.geometry.attributes.position.array
-        );
-        console.log("POTENTIALINDEX", child.geometry.index.array);
-        */
+    // Recursive function to process all nodes
+    function processNode(node: Object3D) {
+      if (node instanceof Mesh || node instanceof SkinnedMesh) {
+        meshes.push(node);
       }
-    });
+      node.children.forEach(processNode);
+    }
+
+    // Start processing from the scene root
+    processNode(gltf.scene);
 
     // Merge all meshes into a single geometry
-    const geometries = meshes.map((mesh) => mesh.geometry);
+    const geometries = meshes.map((mesh) => {
+      const geometry = mesh.geometry.clone();
+      const worldMatrix = new Matrix4();
+      mesh.updateWorldMatrix(true, false);
+      worldMatrix.multiplyMatrices(mesh.matrixWorld, mesh.matrix);
+      geometry.applyMatrix4(worldMatrix);
+      return geometry;
+    });
     const mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries);
-
-    console.log(
-      "MERGEDGEOMETRYVERTICES",
-      mergedGeometry.attributes.position.array
-    );
-    console.log("MERGEDGEOMETRYINDICES", mergedGeometry.index?.array);
 
     const vertices = mergedGeometry.attributes.position.array;
     const indices = mergedGeometry.index?.array;
@@ -44,18 +39,13 @@ export function createCollidersFromGLB(glbPath: string, world: RAPIER.World) {
       return;
     }
 
-    // Scale up vertices by 10x
-    const scaledVertices = new Float32Array(vertices.length);
-    for (let i = 0; i < vertices.length; i++) {
-      scaledVertices[i] = vertices[i] * 10;
-    }
-
+    // Create the collider using the transformed vertices
     const colliderDesc = RAPIER.ColliderDesc.trimesh(
-      scaledVertices,
+      new Float32Array(vertices),
       new Uint32Array(indices)
     );
     world.createCollider(colliderDesc);
 
-    //world.createCollider(RAPIER.ColliderDesc.ball(5));
+    console.log("Collider created successfully");
   });
 }

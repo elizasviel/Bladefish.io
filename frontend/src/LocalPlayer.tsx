@@ -74,7 +74,6 @@ export const LocalPlayer: React.FC<{
         quaternion={quaternion}
         isLocal={true}
         player={player}
-        scale={0.5}
       ></SwordfishModel>
       <ChatBubble player={player} />
     </>
