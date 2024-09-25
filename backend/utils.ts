@@ -3,7 +3,11 @@ import { GLTFLoader } from "node-three-gltf";
 import { BufferGeometry, Mesh, SkinnedMesh, Object3D, Matrix4 } from "three";
 import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
 
-export function createCollidersFromGLB(glbPath: string, world: RAPIER.World) {
+export function createCollidersFromGLB(
+  glbPath: string,
+  world: RAPIER.World,
+  rigidBody: RAPIER.RigidBody
+) {
   console.log("Creating colliders from GLB");
   const loader = new GLTFLoader();
   loader.load(glbPath, (gltf) => {
@@ -44,7 +48,8 @@ export function createCollidersFromGLB(glbPath: string, world: RAPIER.World) {
       new Float32Array(vertices),
       new Uint32Array(indices)
     );
-    world.createCollider(colliderDesc);
+    // Attach the collider to the provided rigid body
+    world.createCollider(colliderDesc, rigidBody);
 
     console.log("Collider created successfully");
   });

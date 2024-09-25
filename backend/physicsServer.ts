@@ -1,4 +1,5 @@
 // Import required modules
+import path from "path";
 import WebSocket from "ws";
 import RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
@@ -144,7 +145,7 @@ RAPIER.init().then(() => {
     } else {
       // Create a rigidbody for the player
       const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(10, 10, 0)
+        .setTranslation(0, 0, 0)
         .setRotation({
           x: 0,
           y: 0,
@@ -153,9 +154,10 @@ RAPIER.init().then(() => {
         })
         .setLinvel(0, 0, 0)
         .enabledRotations(false, false, false);
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
+
       const rigidBody = world.createRigidBody(rigidBodyDesc);
-      const collider = world.createCollider(colliderDesc, rigidBody);
+
+      createCollidersFromGLB("./assets/swordfish.glb", world, rigidBody);
 
       console.log(rigidBody.handle);
 
@@ -488,5 +490,4 @@ RAPIER.init().then(() => {
   // Start the game loop
   gameLoop();
   setTimeout(spawnEnemy, 10000);
-  createCollidersFromGLB("./assets/swordfish.glb", world);
 });
