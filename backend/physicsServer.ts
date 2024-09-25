@@ -46,8 +46,10 @@ interface Enemy {
   position: Position;
   rotation: Rotation;
   velocity: Velocity;
+  movingTowards: Position;
   health: number;
   currentAction: string;
+  aggression: number;
 }
 
 // Initialize the physics engine
@@ -127,27 +129,32 @@ RAPIER.init().then(() => {
 
   function spawnEnemy() {
     const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
-      .setTranslation(0, 10, 0)
+      .setTranslation(0, 0, 0)
       .setRotation({
         x: 0,
         y: 0,
         z: 0,
         w: 1,
-      });
+      })
+      .setLinvel(0, 0, 0);
     const rigidBody = world.createRigidBody(rigidBodyDesc);
     const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 2)
       .setSensor(true)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     const collider = world.createCollider(colliderDesc, rigidBody);
 
-    enemies.push({
+    const enemy: Enemy = {
       id: rigidBody.handle,
       position: rigidBody.translation(),
       rotation: rigidBody.rotation(),
       velocity: rigidBody.linvel(),
+      movingTowards: { x: 20, y: 0, z: 0 },
       health: 30,
       currentAction: "",
-    });
+      aggression: 0,
+    };
+
+    enemies.push(enemy);
 
     console.log("ENEMY SPAWNED");
   }
@@ -459,7 +466,61 @@ RAPIER.init().then(() => {
 
     enemies.forEach((enemy) => {
       const rigidBody = world.getRigidBody(enemy.id);
+      console.log("ENEMY: ", enemy.id);
       if (rigidBody) {
+        // Calculate direction vector towards the destination
+        const currentPos = new THREE.Vector3(
+          enemy.position.x,
+          enemy.position.y,
+          enemy.position.z
+        );
+        const targetPos = new THREE.Vector3(
+          enemy.movingTowards.x,
+          enemy.movingTowards.y,
+          enemy.movingTowards.z
+        );
+        const direction = new THREE.Vector3()
+          .subVectors(targetPos, currentPos)
+          .normalize();
+
+        // Calculate rotation to face the destination
+        const targetRotation = new THREE.Quaternion().setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          direction
+        );
+
+        console.log(
+          "CURRENT, TARGET, DIRECTION, ROTATION: ",
+          currentPos,
+          targetPos,
+          direction,
+          targetRotation
+        );
+
+        // Set rotation
+        rigidBody.setRotation(
+          {
+            x: targetRotation.x,
+            y: targetRotation.y,
+            z: targetRotation.z,
+            w: targetRotation.w,
+          },
+          true
+        );
+
+        // Set linear velocity towards the destination
+        const speed = 5; // Adjust this value to change enemy speed
+        const velocity = direction.multiplyScalar(speed);
+        rigidBody.setLinvel(
+          {
+            x: velocity.x,
+            y: velocity.y,
+            z: velocity.z,
+          },
+          true
+        );
+
+        // Update enemy properties
         enemy.position = rigidBody.translation();
         enemy.rotation = rigidBody.rotation();
         enemy.velocity = rigidBody.linvel();
