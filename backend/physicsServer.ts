@@ -470,6 +470,7 @@ RAPIER.init().then(() => {
       }
     });
 
+    /*
     // Send the debug meshes to the client
     const { vertices, colors } = world.debugRender();
     const debugMeshes = {
@@ -481,6 +482,7 @@ RAPIER.init().then(() => {
         client.send(JSON.stringify(debugMeshes));
       }
     });
+    */
 
     if (stateChanged()) {
       publishState();

@@ -141,7 +141,7 @@ const App: React.FC = () => {
               backgroundColor: "skyblue",
             }}
           >
-            <DebugMesh debugMeshes={debugMeshes} />
+            {/*<DebugMesh debugMeshes={debugMeshes} />*/}
             <Scene
               socket={socket.current}
               playerId={id.current}
