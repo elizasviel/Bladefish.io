@@ -1,5 +1,4 @@
 import { Canvas } from "@react-three/fiber";
-import { Physics } from "@react-three/rapier";
 import { KeyboardControls } from "@react-three/drei";
 import { Scene } from "./Scene";
 import { Loading } from "./Loading";
@@ -51,12 +50,6 @@ interface Enemy {
   currentAction: string;
 }
 
-interface ChatMessage {
-  playerId: number;
-  message: string;
-  timestamp: number;
-}
-
 const keyboardMap = [
   { name: "forward", keys: ["w", "W"] },
   { name: "backward", keys: ["s", "S"] },
@@ -67,9 +60,8 @@ const keyboardMap = [
 
 const App: React.FC = () => {
   console.log("RENDERING APP");
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]); //consider not using state for players and enemies
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
   const [debugMeshes, setDebugMeshes] = useState<{
     vertices: Float32Array;
     colors: Float32Array;
@@ -99,10 +91,6 @@ const App: React.FC = () => {
           break;
         case "serverFull":
           console.log("SERVER IS FULL", data.payload);
-          break;
-        case "chatLog":
-          console.log("RECEIVED CHAT LOG", data.payload);
-          setChatLog(data.payload);
           break;
         case "debugMeshes":
           console.log("RECEIVED DEBUG MESHES", data.payload);
@@ -149,11 +137,7 @@ const App: React.FC = () => {
               enemies={enemies}
             />
           </Canvas>
-          <ChatBox
-            socket={socket.current}
-            playerId={id.current}
-            chatLog={chatLog}
-          />
+          <ChatBox playerId={id.current} />
         </KeyboardControls>
       </div>
     );

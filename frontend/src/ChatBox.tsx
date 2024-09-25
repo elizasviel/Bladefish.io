@@ -7,18 +7,16 @@ interface ChatMessage {
 }
 
 interface ChatBoxProps {
-  socket: WebSocket;
   playerId: number;
-  chatLog: ChatMessage[];
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = ({
-  socket,
-  playerId,
-  chatLog,
-}) => {
+export const ChatBox: React.FC<ChatBoxProps> = ({ playerId }) => {
+  const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+  const socket = useRef<WebSocket>();
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  console.log("CHATLOGSTATE", chatLog);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -27,10 +25,33 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     }
   }, [chatLog]);
 
+  useEffect(() => {
+    socket.current = new WebSocket("ws://localhost:8081");
+
+    socket.current.onopen = () => {
+      console.log("CHATBOX WEBSOCKET CONNECTION OPENED");
+    };
+
+    socket.current.onmessage = (event) => {
+      console.log("CHATBOX RECEIVED WEBSOCKET MESSAGE", event.data);
+      const data = JSON.parse(event.data);
+      setChatLog(data.payload);
+    };
+    socket.current.onclose = () => {
+      console.log("CHATBOX WEBSOCKET CONNECTION CLOSED");
+    };
+
+    return () => {
+      if (socket.current) {
+        socket.current.close();
+      }
+    };
+  }, []);
+
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputMessage.trim()) {
-      socket.send(
+      socket.current?.send(
         JSON.stringify({
           type: "chatMessage",
           payload: { playerId, message: inputMessage.trim() },

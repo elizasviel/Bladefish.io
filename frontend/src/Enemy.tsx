@@ -34,5 +34,11 @@ export const Enemy: React.FC<{ enemy: Enemy }> = ({ enemy }) => {
     enemy.rotation.z,
     enemy.rotation.w
   );
-  return <SharkModel position={position} quaternion={quaternion}></SharkModel>;
+  return (
+    <SharkModel
+      position={position}
+      quaternion={quaternion}
+      enemy={enemy}
+    ></SharkModel>
+  );
 };

@@ -3,7 +3,6 @@ import path from "path";
 import WebSocket from "ws";
 import RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
-import { createCollidersFromGLB } from "./utils";
 
 interface ChatMessage {
   playerId: number;
@@ -60,6 +59,10 @@ RAPIER.init().then(() => {
 
   // Create a WebSocket server on port 8080
   const wss = new WebSocket.Server({ port: 8080 });
+
+  // Create a WebSocket server on port 8081 for chat messages
+  const chatServer = new WebSocket.Server({ port: 8081 });
+
   // Initialize an array to store connected players
   let players: Player[] = [];
   // Initialize an array to store enemies
@@ -68,6 +71,23 @@ RAPIER.init().then(() => {
   let chatLog: ChatMessage[] = [];
   // Initialize a variable to store the last state of the game
   let lastState: string = "";
+
+  chatServer.on("connection", (ws: WebSocket) => {
+    ws.on("open", () => {
+      console.log("CHAT SERVER CONNECTION OPENED");
+    });
+    ws.on("message", (message: WebSocket.Data) => {
+      const data = JSON.parse(message.toString());
+      switch (data.type) {
+        case "chatMessage":
+          handleChatMessage(data.payload);
+          break;
+      }
+    });
+    ws.on("close", () => {
+      console.log("CHAT SERVER CONNECTION CLOSED");
+    });
+  });
 
   // Set up WebSocket server event listeners
   wss.on("connection", (ws: WebSocket) => {
@@ -80,9 +100,6 @@ RAPIER.init().then(() => {
         switch (data.type) {
           case "playerMovement":
             handlePlayerMovement(data.payload);
-            break;
-          case "chatMessage":
-            handleChatMessage(data.payload);
             break;
           case "action":
             handleAction(data.payload);
@@ -100,7 +117,6 @@ RAPIER.init().then(() => {
         }
         players = players.filter((p) => p.ws !== ws);
         console.log("PLAYER DISCONNECTED");
-        publishState();
       });
     } else {
       console.log("CONNECTION REJECTED: SERVER IS FULL");
@@ -157,7 +173,7 @@ RAPIER.init().then(() => {
         .enabledRotations(false, false, false);
 
       const rigidBody = world.createRigidBody(rigidBodyDesc);
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 2);
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 1);
       const collider = world.createCollider(colliderDesc, rigidBody);
 
       console.log(rigidBody.handle);
@@ -233,36 +249,15 @@ RAPIER.init().then(() => {
         console.log("CLIENT NOT FOUND");
       }
     });
-    /*
-    console.log(
-      "STATE PUBLISHED: ",
-      players.map((p) => [
-        p.id,
-        p.position,
-        p.rotation,
-        p.velocity,
-        p.chatBubble,
-        p.currentAction,
-      ]),
-      enemies.map((e) => [
-        e.id,
-        e.position,
-        e.rotation,
-        e.velocity,
-        e.health,
-        e.currentAction,
-      ])
-    );
-    */
   }
 
   function publishChatLog() {
     const chatLogMessage = { type: "chatLog", payload: chatLog };
-    wss.clients.forEach((client) => {
+    chatServer.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(chatLogMessage));
       } else {
-        console.log("CLIENT NOT FOUND");
+        console.log("CHAT CLIENT NOT FOUND");
       }
     });
     console.log("CHAT LOG PUBLISHED: ", chatLog);
