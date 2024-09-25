@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { Model as SharkModel } from "./assets/Shark.tsx";
 
 interface Enemy {
   id: number;
@@ -22,22 +23,16 @@ interface Enemy {
   currentAction: string;
 }
 export const Enemy: React.FC<{ enemy: Enemy }> = ({ enemy }) => {
-  return (
-    <mesh
-      position={
-        new THREE.Vector3(enemy.position.x, enemy.position.y, enemy.position.z)
-      }
-      quaternion={
-        new THREE.Quaternion(
-          enemy.rotation.x,
-          enemy.rotation.y,
-          enemy.rotation.z,
-          enemy.rotation.w
-        )
-      }
-    >
-      <boxGeometry args={[5, 5, 5]} />
-      <meshStandardMaterial color="red" />
-    </mesh>
+  const position = new THREE.Vector3(
+    enemy.position.x,
+    enemy.position.y,
+    enemy.position.z
   );
+  const quaternion = new THREE.Quaternion(
+    enemy.rotation.x,
+    enemy.rotation.y,
+    enemy.rotation.z,
+    enemy.rotation.w
+  );
+  return <SharkModel position={position} quaternion={quaternion}></SharkModel>;
 };

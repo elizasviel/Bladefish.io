@@ -57,6 +57,7 @@ RAPIER.init().then(() => {
   const world = new RAPIER.World({ x: 0.0, y: 0.0, z: 0.0 });
   // Create a queue for handling collision events
   const eventQueue = new RAPIER.EventQueue(true);
+
   // Create a WebSocket server on port 8080
   const wss = new WebSocket.Server({ port: 8080 });
   // Initialize an array to store connected players
@@ -117,10 +118,10 @@ RAPIER.init().then(() => {
         z: 0,
         w: 1,
       });
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(5, 5, 5)
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 2)
       .setSensor(true)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-    const rigidBody = world.createRigidBody(rigidBodyDesc);
     const collider = world.createCollider(colliderDesc, rigidBody);
 
     enemies.push({
@@ -156,8 +157,8 @@ RAPIER.init().then(() => {
         .enabledRotations(false, false, false);
 
       const rigidBody = world.createRigidBody(rigidBodyDesc);
-
-      createCollidersFromGLB("./assets/swordfish.glb", world, rigidBody);
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 2);
+      const collider = world.createCollider(colliderDesc, rigidBody);
 
       console.log(rigidBody.handle);
 
@@ -470,7 +471,6 @@ RAPIER.init().then(() => {
       }
     });
 
-    /*
     // Send the debug meshes to the client
     const { vertices, colors } = world.debugRender();
     const debugMeshes = {
@@ -482,7 +482,6 @@ RAPIER.init().then(() => {
         client.send(JSON.stringify(debugMeshes));
       }
     });
-    */
 
     if (stateChanged()) {
       publishState();
