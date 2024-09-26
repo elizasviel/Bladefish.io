@@ -1,101 +1,157 @@
-import React, { Suspense, useMemo, useState, useEffect } from "react";
-import { Player } from "./Player";
-import { Sphere, Box, Cylinder } from "@react-three/drei";
-import { useWebSocket } from "./WebSocketContext";
-
-interface PlayerData {
-  id: string;
-  position: { x: number; y: number; z: number };
+import { useEffect, useState } from "react";
+import { useThree } from "@react-three/fiber";
+import * as THREE from "three";
+import { Player } from "./Player.tsx";
+import { LocalPlayer } from "./LocalPlayer.tsx";
+import { Terrain } from "./Terrain.tsx";
+import { Enemy } from "./Enemy.tsx";
+interface Player {
+  id: number;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
+  currentAction: string;
+  chatBubble: string;
 }
 
-export const Scene: React.FC = () => {
-  const [players, setPlayers] = useState<PlayerData[]>([]);
-  const { socket, isConnected } = useWebSocket();
-  const [localPlayer, setLocalPlayer] = useState<PlayerData>({
-    id: "local",
-    position: { x: 0, y: 0, z: 0 },
-  });
+interface Enemy {
+  id: number;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  health: number;
+  currentAction: string;
+}
 
-  const seaweed = useMemo(() => generateSeaweed(20), []);
-  const rocks = useMemo(() => generateRocks(10), []);
+export const Scene: React.FC<{
+  socket: WebSocket;
+  playerId: number;
+  players: Player[];
+  enemies: Enemy[];
+}> = ({ socket, playerId, players, enemies }) => {
+  console.log("RENDERING SCENE");
+  const { camera } = useThree();
+  const [hovered, setHovered] = useState<string>(""); //onMouseEnter and onMouseLeave
+  const [keyboardSettings, setKeyboardSettings] = useState<string>("");
+
+  //Sends an action from the player to the server
+  const sendAction = (action: string) => {
+    socket.send(
+      JSON.stringify({
+        type: "action",
+        payload: {
+          playerId: playerId,
+          action: action,
+        },
+      })
+    );
+  };
+
+  //Sends a movement from the player to the server
+  const sendMovement = (input: string) => {
+    console.log("SENDING PLAYER MOVEMENT", input);
+    const quaternion = new THREE.Quaternion();
+    camera.getWorldQuaternion(quaternion);
+
+    socket.send(
+      JSON.stringify({
+        type: "playerMovement",
+        payload: {
+          id: playerId,
+          action: input,
+          cameraRotation: quaternion,
+        },
+      })
+    );
+  };
+
+  //Determines what to do when the user clicks
+  const handleClick = (event: MouseEvent) => {
+    console.log("CLICK", event);
+    switch (hovered) {
+      case "NPC":
+        break;
+      case "ChatBox":
+        break;
+      default:
+        sendAction("attack");
+        break;
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    console.log("KEY DOWN", event);
+    switch (keyboardSettings) {
+      default:
+        sendMovement(event.key);
+        break;
+    }
+  };
+
+  const handleKeyUp = (event: KeyboardEvent) => {
+    console.log("KEY UP", event);
+    switch (keyboardSettings) {
+      default:
+        sendMovement("stop");
+        break;
+    }
+  };
 
   useEffect(() => {
-    if (socket) {
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "players") {
-          setPlayers(data.players.filter((p: PlayerData) => p.id !== "local"));
-        }
-      };
-    }
-  }, [socket]);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("click", handleClick);
 
-  useEffect(() => {
-    if (isConnected) {
-      socket?.send(JSON.stringify({ type: "join", data: localPlayer }));
-    }
-  }, [isConnected, localPlayer, socket]);
+    return () => {
+      console.log("CLEANING UP WEBSOCKET CONNECTION");
+      socket.close();
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("click", handleClick);
+    };
+  }, []);
 
+  console.log("RENDERING PLAYERS", players);
   return (
-    <Suspense fallback={null}>
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[5, 5, 5]} intensity={0.5} />
-      <Player
-        key={localPlayer.id}
-        position={localPlayer.position}
-        isLocal={true}
-        onPositionUpdate={(pos) => {
-          setLocalPlayer((prev) => ({ ...prev, position: pos }));
-          socket?.send(JSON.stringify({ type: "position", data: pos }));
-        }}
-      />
-      {players.map((player) => (
-        <Player key={player.id} position={player.position} isLocal={false} />
+    <>
+      <ambientLight intensity={1.5} />
+      <pointLight position={[10, 10, 10]} />
+      <LocalPlayer player={players.find((player) => player.id === playerId)} />
+      {players
+        .filter((player) => player.id !== playerId)
+        .map((player) => (
+          <Player key={player.id} player={player} />
+        ))}
+      {enemies.map((enemy) => (
+        <Enemy key={enemy.id} enemy={enemy} />
       ))}
-
-      {/* Ocean floor */}
-      <Box args={[100, 1, 100]} position={[0, -5, 0]}>
-        <meshStandardMaterial color="#1e3d59" />
-      </Box>
-
-      {/* Seaweed */}
-      {seaweed}
-
-      {/* Rocks */}
-      {rocks}
-    </Suspense>
+      <Terrain />
+    </>
   );
 };
-
-function generateSeaweed(count: number) {
-  return [...Array(count)].map((_, index) => (
-    <Cylinder
-      key={`seaweed-${index}`}
-      args={[0.1, 0.1, 3 + Math.random() * 2, 8]}
-      position={[
-        -20 + Math.random() * 40,
-        -3.5 + (3 + Math.random() * 2) / 2,
-        -20 + Math.random() * 40,
-      ]}
-      rotation={[Math.random() * 0.2, 0, Math.random() * 0.2]}
-    >
-      <meshStandardMaterial color="#2ecc71" />
-    </Cylinder>
-  ));
-}
-
-function generateRocks(count: number) {
-  return [...Array(count)].map((_, index) => (
-    <Sphere
-      key={`rock-${index}`}
-      args={[1 + Math.random() * 2, 8, 8]}
-      position={[
-        -30 + Math.random() * 60,
-        -4.5 + Math.random(),
-        -30 + Math.random() * 60,
-      ]}
-    >
-      <meshStandardMaterial color="#7f8c8d" />
-    </Sphere>
-  ));
-}
