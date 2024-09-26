@@ -397,13 +397,29 @@ RAPIER.init().then(() => {
         if (player.currentAction != "") {
           console.log("Player hit enemy");
           enemy.health -= 10;
+          const enemyRigidBody = world.getRigidBody(enemy.id);
+          if (enemyRigidBody) {
+            enemyRigidBody.setBodyType(RAPIER.RigidBodyType.Fixed, true);
+            setTimeout(() => {
+              const enemyRigidBodyAfterTimeout = world.getRigidBody(enemy.id);
+              if (enemyRigidBodyAfterTimeout) {
+                enemyRigidBodyAfterTimeout.setBodyType(
+                  RAPIER.RigidBodyType.Dynamic,
+                  true
+                );
+              }
+            }, 5000);
+          }
           console.log("Enemy health:", enemy.health);
         } else {
           enemy.currentAction = "dealTouchDamage";
           console.log("Touch damage");
         }
         if (enemy.health <= 0) {
-          world.removeRigidBody(world.getRigidBody(enemy.id));
+          const enemyRigidBody = world.getRigidBody(enemy.id);
+          if (enemyRigidBody) {
+            world.removeRigidBody(enemyRigidBody);
+          }
           enemies = enemies.filter((e) => e.id !== enemy.id);
         }
       }
