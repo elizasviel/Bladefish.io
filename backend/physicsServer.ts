@@ -408,7 +408,7 @@ RAPIER.init().then(() => {
                   true
                 );
               }
-            }, 5000);
+            }, 1000);
           }
           console.log("Enemy health:", enemy.health);
         } else {
