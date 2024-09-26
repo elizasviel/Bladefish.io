@@ -67,6 +67,7 @@ export const LocalPlayer: React.FC<{
         maxPolarAngle={Math.PI / 1.1}
         minPolarAngle={0.3}
         enablePan={false}
+        rotateSpeed={0.5}
       />
 
       <SwordfishModel

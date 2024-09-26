@@ -391,9 +391,14 @@ RAPIER.init().then(() => {
 
       //If we have a player, an enemy, and the collision has started
       if (player && enemy && started) {
-        console.log("Player hit enemy");
-        enemy.health -= 10;
-        console.log("Enemy health:", enemy.health);
+        if (player.currentAction != "") {
+          console.log("Player hit enemy");
+          enemy.health -= 10;
+          console.log("Enemy health:", enemy.health);
+        } else {
+          enemy.currentAction = "dealTouchDamage";
+          console.log("Touch damage");
+        }
         if (enemy.health <= 0) {
           world.removeRigidBody(world.getRigidBody(enemy.id));
           enemies = enemies.filter((e) => e.id !== enemy.id);
@@ -511,27 +516,65 @@ RAPIER.init().then(() => {
     setTimeout(gameLoop, 16);
   };
   // Start the game loop
-  gameLoop();
+  gameLoop(); // Spawn multiple enemies with different positions and targets
   setTimeout(() => {
-    spawnEnemy(
-      new RAPIER.RigidBodyDesc(RAPIER.RigidBodyType.KinematicVelocityBased),
-      RAPIER.ColliderDesc.cuboid(1, 1, 2)
-        .setSensor(true)
-        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+    const enemyConfigurations = [
       {
-        id: 0, //This number is replaced with handle when spawned
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0, w: 1 },
-        velocity: { x: 0, y: 0, z: 0 },
-        movingTowards: { x: 0, y: 0, z: 0 },
+        spawnPosition: { x: 0, y: 0, z: 0 },
         targetPositions: [
           { x: 20, y: 0, z: 0 },
           { x: -20, y: 0, z: 0 },
         ],
-        health: 50,
-        currentAction: "",
-        aggression: 0,
-      }
-    );
+      },
+      {
+        spawnPosition: { x: 10, y: 0, z: 10 },
+        targetPositions: [
+          { x: 10, y: 0, z: -10 },
+          { x: -10, y: 0, z: 10 },
+        ],
+      },
+      {
+        spawnPosition: { x: -10, y: 0, z: -10 },
+        targetPositions: [
+          { x: 15, y: 0, z: 15 },
+          { x: -15, y: 0, z: -15 },
+        ],
+      },
+      {
+        spawnPosition: { x: 5, y: 0, z: -5 },
+        targetPositions: [
+          { x: -5, y: 0, z: 5 },
+          { x: 5, y: 0, z: -5 },
+        ],
+      },
+      {
+        spawnPosition: { x: -5, y: 0, z: 5 },
+        targetPositions: [
+          { x: 25, y: 0, z: -25 },
+          { x: -25, y: 0, z: 25 },
+        ],
+      },
+    ];
+
+    enemyConfigurations.forEach((config, index) => {
+      spawnEnemy(
+        new RAPIER.RigidBodyDesc(RAPIER.RigidBodyType.KinematicVelocityBased),
+        RAPIER.ColliderDesc.cuboid(1, 1, 2)
+          .setSensor(true)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        {
+          id: 0, // This number is replaced with handle when spawned
+          position: config.spawnPosition,
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          velocity: { x: 0, y: 0, z: 0 },
+          movingTowards: config.targetPositions[0],
+          targetPositions: config.targetPositions,
+          health: 50,
+          currentAction: "",
+          aggression: 0,
+        }
+      );
+      console.log(`Spawned enemy ${index + 1}`);
+    });
   }, 10000);
 });
