@@ -1,9 +1,9 @@
 // Import required modules
-import path from "path";
 import WebSocket from "ws";
-import RAPIER from "@dimforge/rapier3d-compat";
+import * as RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
 
+//A ChatMessage always has a playerId, message, and timestamp
 interface ChatMessage {
   playerId: number;
   message: string;
@@ -47,6 +47,7 @@ interface Enemy {
   rotation: Rotation;
   velocity: Velocity;
   movingTowards: Position;
+  targetPositions: Position[];
   health: number;
   currentAction: string;
   aggression: number;
@@ -64,6 +65,11 @@ RAPIER.init().then(() => {
 
   // Create a WebSocket server on port 8081 for chat messages
   const chatServer = new WebSocket.Server({ port: 8081 });
+  // Initialize a variable to store the last state of the game
+  let lastState: { players: Player[]; enemies: Enemy[] } = {
+    players: [],
+    enemies: [],
+  };
 
   // Initialize an array to store connected players
   let players: Player[] = [];
@@ -71,9 +77,8 @@ RAPIER.init().then(() => {
   let enemies: Enemy[] = [];
   // Initialize a chat log to store chat messages
   let chatLog: ChatMessage[] = [];
-  // Initialize a variable to store the last state of the game
-  let lastState: string = "";
 
+  // Set up chat server event listeners
   chatServer.on("connection", (ws: WebSocket) => {
     ws.on("open", () => {
       console.log("CHAT SERVER CONNECTION OPENED");
@@ -91,157 +96,85 @@ RAPIER.init().then(() => {
     });
   });
 
-  // Set up WebSocket server event listeners
+  // Set up game server event listeners
   wss.on("connection", (ws: WebSocket) => {
     // Initialize the player
-    if (initializePlayer(ws)) {
-      console.log("NEW PLAYER CONNECTED");
-      // Add event listener to the WebSocket connection for incoming messages
-      ws.on("message", (message: WebSocket.Data) => {
-        const data = JSON.parse(message.toString());
-        switch (data.type) {
-          case "playerMovement":
-            handlePlayerMovement(data.payload);
-            break;
-          case "action":
-            handleAction(data.payload);
-            break;
+    initializePlayer(
+      new RAPIER.RigidBodyDesc(RAPIER.RigidBodyType.Dynamic),
+      RAPIER.ColliderDesc.cuboid(1, 1, 2),
+      {
+        id: 0,
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 0 },
+        velocity: { x: 0, y: 0, z: 0 },
+        chatBubble: "",
+        currentAction: "",
+        ws: ws,
+      },
+      ws
+    );
+
+    // Add event listener to the WebSocket connection for incoming messages
+    ws.on("message", (message: WebSocket.Data) => {
+      const data = JSON.parse(message.toString());
+      switch (data.type) {
+        case "playerMovement":
+          handlePlayerMovement(data.payload);
+          break;
+        case "action":
+          handleAction(data.payload);
+          break;
+      }
+    });
+    // Handle client disconnection
+    ws.on("close", () => {
+      const player = players.find((p) => p.ws === ws);
+      // Remove the player from the physics world
+      if (player) {
+        const rigidBody = world.getRigidBody(player.id);
+        if (rigidBody) {
+          world.removeRigidBody(rigidBody);
         }
-      });
-      // Handle client disconnection
-      ws.on("close", () => {
-        const player = players.find((p) => p.ws === ws);
-        if (player) {
-          const rigidBody = world.getRigidBody(player.id);
-          if (rigidBody) {
-            world.removeRigidBody(rigidBody);
-          }
-        }
-        players = players.filter((p) => p.ws !== ws);
-        console.log("PLAYER DISCONNECTED");
-      });
-    } else {
-      console.log("CONNECTION REJECTED: SERVER IS FULL");
-      return;
-    }
-    console.log("WEBSOCKET SERVER IS RUNNING ON ws://localhost:8080");
+      }
+      // Remove the player from the players array
+      players = players.filter((p) => p.ws !== ws);
+      console.log("PLAYER DISCONNECTED");
+    });
   });
 
-  function spawnEnemy() {
-    const rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicVelocityBased()
-      .setTranslation(0, 0, 0)
-      .setRotation({
-        x: 0,
-        y: 0,
-        z: 0,
-        w: 1,
-      })
-      .setLinvel(0, 0, 0);
+  //Spawnenemy needs to be able to take in a spawn position, a collider description, and a target position
+  function spawnEnemy(
+    rigidBodyDesc: RAPIER.RigidBodyDesc,
+    colliderDesc: RAPIER.ColliderDesc,
+    enemy: Enemy
+  ) {
+    // Add the rigidbody to the world
     const rigidBody = world.createRigidBody(rigidBodyDesc);
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 2)
-      .setSensor(true)
-      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+    // Add the collider to the world
     const collider = world.createCollider(colliderDesc, rigidBody);
-
-    const enemy: Enemy = {
-      id: rigidBody.handle,
-      position: rigidBody.translation(),
-      rotation: rigidBody.rotation(),
-      velocity: rigidBody.linvel(),
-      movingTowards: { x: 20, y: 0, z: 0 },
-      health: 30,
-      currentAction: "",
-      aggression: 0,
-    };
-
+    // Set the enemy's id to the rigidbody's handle
+    enemy.id = rigidBody.handle;
+    // Add the enemy to the enemies array
     enemies.push(enemy);
-
     console.log("ENEMY SPAWNED");
   }
 
-  function initializePlayer(ws: WebSocket) {
-    if (players.length >= 10) {
-      ws.send(
-        JSON.stringify({ type: "serverFull", payload: "Server is full" })
-      );
-      ws.close();
-      return false;
-    } else {
-      // Create a rigidbody for the player
-      const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(0, 0, 0)
-        .setRotation({
-          x: 0,
-          y: 0,
-          z: 0,
-          w: 1,
-        })
-        .setLinvel(0, 0, 0)
-        .enabledRotations(false, false, false);
-
-      const rigidBody = world.createRigidBody(rigidBodyDesc);
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 1);
-      const collider = world.createCollider(colliderDesc, rigidBody);
-
-      console.log(rigidBody.handle);
-
-      const newPlayer: Player = {
-        id: rigidBody.handle,
-        position: rigidBody.translation(),
-        rotation: rigidBody.rotation(),
-        velocity: rigidBody.linvel(),
-        currentAction: "",
-        chatBubble: "",
-        ws: ws,
-      };
-      // Add the new player to the players array
-      players.push(newPlayer);
-      // Send the player's ID to the client
-      ws.send(JSON.stringify({ type: "id", payload: newPlayer.id }));
-
-      publishChatLog();
-
-      console.log(
-        "NEW PLAYER CONNECTED. CURRENT PLAYERS: ",
-        players.map((p) => [
-          p.id,
-          p.position,
-          p.rotation,
-          p.velocity,
-          p.chatBubble,
-          p.currentAction,
-        ])
-      );
-      return true;
-    }
-  }
-
-  function stateChanged(): boolean {
-    const currentState = JSON.stringify({
-      players: players.map((p) => ({
-        id: p.id,
-        position: p.position,
-        rotation: p.rotation,
-        velocity: p.velocity,
-        chatBubble: p.chatBubble,
-        currentAction: p.currentAction,
-      })),
-      enemies: enemies.map((e) => ({
-        id: e.id,
-        position: e.position,
-        rotation: e.rotation,
-        velocity: e.velocity,
-        health: e.health,
-        currentAction: e.currentAction,
-      })),
-    });
-
-    if (currentState !== lastState) {
-      lastState = currentState;
-      return true;
-    } else {
-      return false;
-    }
+  function initializePlayer(
+    rigidBodyDesc: RAPIER.RigidBodyDesc,
+    colliderDesc: RAPIER.ColliderDesc,
+    player: Player,
+    ws: WebSocket
+  ) {
+    // Create a rigidbody for the player
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
+    // Create a collider for the player
+    const collider = world.createCollider(colliderDesc, rigidBody);
+    // Set the player's id to the rigidbody's handle
+    player.id = rigidBody.handle;
+    // Add the player to the players array
+    players.push(player);
+    ws.send(JSON.stringify({ type: "id", payload: player.id }));
+    console.log("PLAYER INITIALIZED");
   }
 
   function publishState() {
@@ -256,6 +189,7 @@ RAPIER.init().then(() => {
         console.log("CLIENT NOT FOUND");
       }
     });
+    //console.log("STATE PUBLISHED: ", state);
   }
 
   function publishChatLog() {
@@ -267,7 +201,7 @@ RAPIER.init().then(() => {
         console.log("CHAT CLIENT NOT FOUND");
       }
     });
-    console.log("CHAT LOG PUBLISHED: ", chatLog);
+    // console.log("CHAT LOG PUBLISHED: ", chatLog);
   }
 
   function handleChatMessage(payload: any) {
@@ -434,6 +368,7 @@ RAPIER.init().then(() => {
     } else {
       console.log("Player not found:", payload.id);
     }
+    //console.log("PLAYER MOVED");
   }
 
   // Define the game loop
@@ -442,8 +377,19 @@ RAPIER.init().then(() => {
 
     eventQueue.drainCollisionEvents((handle1, handle2, started) => {
       console.log("COLLISION EVENT: ", handle1, handle2, started);
-      const player = players.find((p) => p.id === handle1);
-      const enemy = enemies.find((e) => e.id === handle2);
+
+      //On collision, check if either of the handles is a player
+      //And check if either of the handles is an enemy
+
+      const player =
+        players.find((p) => p.id === handle1) ||
+        players.find((p) => p.id === handle2);
+
+      const enemy =
+        enemies.find((e) => e.id === handle1) ||
+        enemies.find((e) => e.id === handle2);
+
+      //If we have a player, an enemy, and the collision has started
       if (player && enemy && started) {
         console.log("Player hit enemy");
         enemy.health -= 10;
@@ -455,6 +401,7 @@ RAPIER.init().then(() => {
       }
     });
 
+    //Update the player positions
     players.forEach((player) => {
       const rigidBody = world.getRigidBody(player.id);
       if (rigidBody) {
@@ -464,21 +411,40 @@ RAPIER.init().then(() => {
       }
     });
 
+    //Update the enemy positions
     enemies.forEach((enemy) => {
       const rigidBody = world.getRigidBody(enemy.id);
-      console.log("ENEMY: ", enemy.id);
       if (rigidBody) {
-        // Calculate direction vector towards the destination
         const currentPos = new THREE.Vector3(
           enemy.position.x,
           enemy.position.y,
           enemy.position.z
         );
+
+        // Check if the enemy is close to its target
+        const distanceThreshold = 0.5; // Adjust this value as needed
+        const distanceToTarget = currentPos.distanceTo(
+          new THREE.Vector3(
+            enemy.movingTowards.x,
+            enemy.movingTowards.y,
+            enemy.movingTowards.z
+          )
+        );
+
+        if (distanceToTarget < distanceThreshold) {
+          // Switch to the other target
+          enemy.movingTowards =
+            enemy.movingTowards === enemy.targetPositions[0]
+              ? enemy.targetPositions[1]
+              : enemy.targetPositions[0];
+        }
+
         const targetPos = new THREE.Vector3(
           enemy.movingTowards.x,
           enemy.movingTowards.y,
           enemy.movingTowards.z
         );
+
         const direction = new THREE.Vector3()
           .subVectors(targetPos, currentPos)
           .normalize();
@@ -487,14 +453,6 @@ RAPIER.init().then(() => {
         const targetRotation = new THREE.Quaternion().setFromUnitVectors(
           new THREE.Vector3(0, 0, 1),
           direction
-        );
-
-        console.log(
-          "CURRENT, TARGET, DIRECTION, ROTATION: ",
-          currentPos,
-          targetPos,
-          direction,
-          targetRotation
         );
 
         // Set rotation
@@ -520,12 +478,23 @@ RAPIER.init().then(() => {
           true
         );
 
-        // Update enemy properties
+        // Update enemy object properties
         enemy.position = rigidBody.translation();
         enemy.rotation = rigidBody.rotation();
         enemy.velocity = rigidBody.linvel();
       }
     });
+
+    // Check for state changes
+    const newState = {
+      players: players.map((p) => ({ ...p, ws: undefined })), // Exclude WebSocket from comparison
+      enemies: enemies,
+    };
+
+    if (JSON.stringify(newState) !== JSON.stringify(lastState)) {
+      publishState();
+      lastState = JSON.parse(JSON.stringify(newState)); // Deep copy the new state
+    }
 
     // Send the debug meshes to the client
     const { vertices, colors } = world.debugRender();
@@ -539,12 +508,30 @@ RAPIER.init().then(() => {
       }
     });
 
-    if (stateChanged()) {
-      publishState();
-    }
     setTimeout(gameLoop, 16);
   };
   // Start the game loop
   gameLoop();
-  setTimeout(spawnEnemy, 10000);
+  setTimeout(() => {
+    spawnEnemy(
+      new RAPIER.RigidBodyDesc(RAPIER.RigidBodyType.KinematicVelocityBased),
+      RAPIER.ColliderDesc.cuboid(1, 1, 2)
+        .setSensor(true)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      {
+        id: 0, //This number is replaced with handle when spawned
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        velocity: { x: 0, y: 0, z: 0 },
+        movingTowards: { x: 0, y: 0, z: 0 },
+        targetPositions: [
+          { x: 20, y: 0, z: 0 },
+          { x: -20, y: 0, z: 0 },
+        ],
+        health: 50,
+        currentAction: "",
+        aggression: 0,
+      }
+    );
+  }, 10000);
 });
