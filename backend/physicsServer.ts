@@ -35,6 +35,7 @@ interface Player {
   id: number;
   position: Position;
   rotation: Rotation;
+  targetRotation: Rotation;
   velocity: Velocity;
   currentAction: string;
   chatBubble: string;
@@ -106,6 +107,7 @@ RAPIER.init().then(() => {
         id: 0,
         position: { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 0, z: 0, w: 0 },
+        targetRotation: { x: 0, y: 0, z: 0, w: 0 },
         velocity: { x: 0, y: 0, z: 0 },
         chatBubble: "",
         currentAction: "",
@@ -275,15 +277,12 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          player.setRotation(
-            {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-            true
-          );
+          playerObject.targetRotation = {
+            x: rotation.x,
+            y: rotation.y,
+            z: rotation.z,
+            w: rotation.w,
+          };
 
           break;
         case "s":
@@ -298,15 +297,12 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          player.setRotation(
-            {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-            true
-          );
+          playerObject.targetRotation = {
+            x: rotation.x,
+            y: rotation.y,
+            z: rotation.z,
+            w: rotation.w,
+          };
 
           break;
 
@@ -322,15 +318,12 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          player.setRotation(
-            {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-            true
-          );
+          playerObject.targetRotation = {
+            x: rotation.x,
+            y: rotation.y,
+            z: rotation.z,
+            w: rotation.w,
+          };
 
           break;
         case "d":
@@ -349,15 +342,12 @@ RAPIER.init().then(() => {
             { x: movement.x, y: movement.y, z: movement.z },
             true
           );
-          player.setRotation(
-            {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w,
-            },
-            true
-          );
+          playerObject.targetRotation = {
+            x: rotation.x,
+            y: rotation.y,
+            z: rotation.z,
+            w: rotation.w,
+          };
 
           break;
         case "stop":
@@ -369,6 +359,19 @@ RAPIER.init().then(() => {
       console.log("Player not found:", payload.id);
     }
     //console.log("PLAYER MOVED");
+  }
+
+  function interpolateRotation(
+    current: Rotation,
+    target: Rotation,
+    t: number
+  ): Rotation {
+    return {
+      x: current.x + (target.x - current.x) * t,
+      y: current.y + (target.y - current.y) * t,
+      z: current.z + (target.z - current.z) * t,
+      w: current.w + (target.w - current.w) * t,
+    };
   }
 
   // Define the game loop
@@ -411,8 +414,17 @@ RAPIER.init().then(() => {
       const rigidBody = world.getRigidBody(player.id);
       if (rigidBody) {
         player.position = rigidBody.translation();
-        player.rotation = rigidBody.rotation();
         player.velocity = rigidBody.linvel();
+
+        // Interpolate rotation
+        const interpolationFactor = 0.1; // Adjust this value to change interpolation speed
+        const interpolatedRotation = interpolateRotation(
+          player.rotation,
+          player.targetRotation,
+          interpolationFactor
+        );
+        player.rotation = interpolatedRotation;
+        rigidBody.setRotation(interpolatedRotation, true);
       }
     });
 

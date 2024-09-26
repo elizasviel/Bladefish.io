@@ -59,6 +59,13 @@ export function Model({
   const { actions } = useAnimations(animations, group);
 
   useEffect(() => {
+    // Disable face culling for all materials
+    Object.values(materials).forEach((material) => {
+      material.side = THREE.DoubleSide;
+    });
+  }, [materials]);
+
+  useEffect(() => {
     if (player.currentAction === "attack") {
       actions["Fish_Armature|Attack"]?.setLoop(THREE.LoopOnce, 1);
       actions["Fish_Armature|Attack"]?.play();

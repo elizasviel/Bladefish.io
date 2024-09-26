@@ -5,7 +5,7 @@ Files: Sunfish.glb [157.28KB] > /Users/normanqian/fractalcamp/gamesHackathon2/fr
 */
 
 import * as THREE from "three";
-import React from "react";
+import React, { useEffect } from "react";
 import { useGraph } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { GLTF, SkeletonUtils } from "three-stdlib";
@@ -20,6 +20,15 @@ type ActionName =
 
 interface GLTFAction extends THREE.AnimationClip {
   name: ActionName;
+}
+
+interface Player {
+  id: number;
+  position: { x: number; y: number; z: number };
+  velocity: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number; w: number };
+  currentAction: string;
+  chatBubble: string;
 }
 
 type GLTFResult = GLTF & {
@@ -37,12 +46,22 @@ type GLTFResult = GLTF & {
   animations: GLTFAction[];
 };
 
-export function Model(props: JSX.IntrinsicElements["group"]) {
+export function Model({
+  player,
+  ...props
+}: { isLocal: boolean; player: Player } & JSX.IntrinsicElements["group"]) {
   const group = React.useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF("/Sunfish-transformed.glb");
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(clone) as GLTFResult;
   const { actions } = useAnimations(animations, group);
+  useEffect(() => {
+    if (player.currentAction === "attack") {
+      actions["Fish_Armature|Attack"]?.setLoop(THREE.LoopOnce, 1);
+      actions["Fish_Armature|Attack"]?.play();
+      actions["Fish_Armature|Attack"]?.reset();
+    }
+  }, [player.currentAction]);
   return (
     <group ref={group} {...props} dispose={null}>
       <group name="Root_Scene">

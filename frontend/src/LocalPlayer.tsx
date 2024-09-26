@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import { Model as SwordfishModel } from "./assets/Swordfish.tsx";
+import { Model as SunfishModel } from "./assets/Sunfish.tsx";
 import { ChatBubble } from "./ChatBubble";
 import { OrbitControls } from "@react-three/drei";
 
@@ -72,7 +73,7 @@ export const LocalPlayer: React.FC<{
 
       <SwordfishModel
         position={position}
-        quaternion={quaternion}
+        quaternion={quaternion.normalize()}
         isLocal={true}
         player={player}
         scale={0.5}
