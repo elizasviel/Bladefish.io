@@ -61,8 +61,8 @@ RAPIER.init().then(() => {
   // Create a queue for handling collision events
   const eventQueue = new RAPIER.EventQueue(true);
 
-  // Create a WebSocket server on port 8080
-  const wss = new WebSocket.Server({ port: 8080 });
+  const port = Number(process.env.PORT) || 8080;
+  const wss = new WebSocket.Server({ port: port });
 
   // Create a WebSocket server on port 8081 for chat messages
   const chatServer = new WebSocket.Server({ port: 8081 });
